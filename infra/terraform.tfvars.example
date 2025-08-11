@@ -1,0 +1,35 @@
+# AWS Configuration
+aws_region = "eu-west-2"
+
+# Environment
+environment = "dev"
+
+# Application Configuration
+app_name  = "rideshare"
+app_image = "rideshare-api:latest"
+app_port  = 8000
+app_count = 2
+
+# VPC Configuration
+vpc_cidr = "10.0.0.0/16"
+availability_zones = ["eu-west-2a", "eu-west-2b"]
+
+# MongoDB Atlas Configuration
+mongodb_atlas_public_key  = "your_mongodb_atlas_public_key"
+mongodb_atlas_private_key = "your_mongodb_atlas_private_key"
+mongodb_atlas_project_id  = "your_mongodb_atlas_project_id"
+
+# Application Secrets
+jwt_secret = "your_jwt_secret_key_here"
+mapbox_access_token = "your_mapbox_access_token"
+
+# Kafka Configuration
+kafka_bootstrap_servers = "localhost:9092"
+
+# Optional: SSL Certificate for HTTPS
+# certificate_arn = "arn:aws:acm:eu-west-2:123456789012:certificate/your-cert-id"
+
+# Optional: Route53 Configuration
+# create_route53_record = true
+# route53_zone_id = "your_route53_zone_id"
+# domain_name = "rideshare.yourdomain.com"
