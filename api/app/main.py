@@ -1,11 +1,27 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
+from beanie import init_beanie
 from app import database
-from app.routes import rides
+from app.routes import rides, driver, payments, location, safety, environmental, feedback
 from app.auth import auth_backend, User, UserCreate, UserRead, UserUpdate, get_user_db
 from fastapi_users import FastAPIUsers
 import uuid
 
-app = FastAPI()
+app = FastAPI(
+    title="RideShare API",
+    description="A comprehensive ride-sharing platform API with real-time location tracking, safety features, environmental impact calculation, community matching, analytics, notifications, and route optimization",
+    version="1.0.0"
+)
+
+# CORS for Flutter app and local testing
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS or ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 fastapi_users = FastAPIUsers[User, uuid.UUID](
     get_user_db,
@@ -18,11 +34,22 @@ fastapi_users = FastAPIUsers[User, uuid.UUID](
 
 @app.on_event("startup")
 async def startup_db_client():
+    # Initialize collections and indexes
     await database.create_indexes()
+    # Initialize Beanie ODM for FastAPI-Users models
+    from app.auth import User  # local import to avoid circular
+    await init_beanie(database.database, document_models=[User])
 
+# Include all API routers
 app.include_router(rides.router, prefix="/rides", tags=["Rides"])
 app.include_router(driver.router, prefix="/driver", tags=["Driver"])
 app.include_router(payments.router, prefix="/payments", tags=["Payments"])
+app.include_router(location.router, prefix="/location", tags=["Location"])
+app.include_router(safety.router, prefix="/safety", tags=["Safety"])
+app.include_router(environmental.router, prefix="/environmental", tags=["Environmental"])
+app.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
+
+# Authentication routes
 app.include_router(
     fastapi_users.get_auth_router(auth_backend),
     prefix="/auth/jwt",
@@ -46,3 +73,23 @@ async def websocket_endpoint(websocket: WebSocket, ride_id: str):
         data = await websocket.receive_text()
         # For now, just echo the data back
         await websocket.send_text(f"Message text was: {data}")
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to RideShare API",
+        "version": "1.0.0",
+        "features": [
+            "Real-time ride management",
+            "Location tracking and WebSocket support",
+            "Safety features and emergency alerts",
+            "Environmental impact calculation",
+            "User feedback and rating system",
+            "Payment processing",
+            "Driver route optimization",
+            "Community-based ride matching",
+            "Comprehensive analytics and reporting",
+            "Real-time notifications",
+            "Advanced route optimization algorithms"
+        ]
+    }

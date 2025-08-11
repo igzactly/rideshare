@@ -9,13 +9,11 @@ from fastapi_users.authentication import (
     JWTStrategy,
 )
 from motor.motor_asyncio import AsyncIOMotorClient
+from app.config import settings
 
-DATABASE_URL = "mongodb://localhost:27017"
-client = AsyncIOMotorClient(DATABASE_URL, uuidRepresentation="standard")
-db = client["rideshare"]
+client = AsyncIOMotorClient(settings.MONGODB_URL, uuidRepresentation="standard")
+db = client[settings.MONGODB_DB]
 collection = db["users"]
-
-SECRET = "SECRET"
 
 class User(BeanieBaseUser[uuid.UUID]):
     is_driver: bool = False
@@ -38,7 +36,7 @@ class UserUpdate(schemas.BaseUserUpdate):
 bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
 
 def get_jwt_strategy() -> JWTStrategy:
-    return JWTStrategy(secret=SECRET, lifetime_seconds=3600)
+    return JWTStrategy(secret=settings.SECRET_KEY, lifetime_seconds=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
 
 auth_backend = AuthenticationBackend(
     name="jwt",
