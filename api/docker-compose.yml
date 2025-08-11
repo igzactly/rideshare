@@ -1,23 +1,45 @@
-version: '3.9'
-
+version: '3.8'
 services:
+  mongo:
+    image: mongo:6
+    container_name: rideshare-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGODB_DB:-rideshare}
+    volumes:
+      - mongo_data:/data/db
+
+  mongo-express:
+    image: mongo-express:1.0.2-20
+    container_name: rideshare-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    depends_on:
+      - mongo
+
   api:
     build: .
+    container_name: rideshare-api
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - MONGO_URI=mongodb://mongo:27017
+      MONGODB_URL: mongodb://mongo:27017
+      MONGODB_DB: ${MONGODB_DB:-rideshare}
+      SECRET_KEY: ${SECRET_KEY:-change-me}
+      OSRM_URL: ${OSRM_URL:-http://router.project-osrm.org}
     depends_on:
       - mongo
-    restart: always
-
-  mongo:
-    image: mongo:6
-    ports:
-      - "27017:27017"
     volumes:
-      - mongo_data:/data/db
-    restart: always
+      - ./app:/app/app:ro
 
 volumes:
   mongo_data:
