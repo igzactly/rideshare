@@ -16,8 +16,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy app
 COPY app /app/app
-COPY .env /app/.env  \
-    || true
+COPY env.example /app/.env
 
 # Expose port
 EXPOSE 8000
