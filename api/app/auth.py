@@ -2,7 +2,7 @@ import uuid
 from typing import Optional
 
 from fastapi_users import schemas
-from fastapi_users.db import BeanieBaseUser, BeanieUserDatabase
+from fastapi_users_db_beanie import BeanieBaseUser, BeanieUserDatabase
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
