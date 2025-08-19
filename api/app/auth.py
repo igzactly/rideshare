@@ -15,7 +15,7 @@ from beanie import Document
 client = AsyncIOMotorClient(settings.MONGODB_URL, uuidRepresentation="standard")
 db = client[settings.MONGODB_DB]
 
-class User(BeanieBaseUser[uuid.UUID], Document):
+class User(BeanieBaseUser[uuid.UUID]):
     is_driver: bool = False
     is_verified_driver: bool = False
 
