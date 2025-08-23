@@ -209,7 +209,7 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.my_location,
                             color: AppTheme.primaryColor,
                           ),
@@ -421,31 +421,29 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 12),
-                      ...rideProvider.availableRides
-                          .map((ride) => Card(
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: AppTheme.primaryColor,
-                                    child: Icon(
-                                      Icons.directions_car,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  title: Text(
-                                      '${ride.pickupAddress} → ${ride.dropoffAddress}'),
-                                  subtitle: Text(
-                                    '${ride.pickupTime.toString().substring(0, 16)} • ${ride.type.name}',
-                                  ),
-                                  trailing: ElevatedButton(
-                                    onPressed: () {
-                                      // Accept ride logic
-                                      rideProvider.acceptRide(ride.id, 'token');
-                                    },
-                                    child: const Text('Accept'),
-                                  ),
+                      ...rideProvider.availableRides.map((ride) => Card(
+                            child: ListTile(
+                              leading: const CircleAvatar(
+                                backgroundColor: AppTheme.primaryColor,
+                                child: Icon(
+                                  Icons.directions_car,
+                                  color: Colors.white,
                                 ),
-                              ))
-                          .toList(),
+                              ),
+                              title: Text(
+                                  '${ride.pickupAddress} → ${ride.dropoffAddress}'),
+                              subtitle: Text(
+                                '${ride.pickupTime.toString().substring(0, 16)} • ${ride.type.name}',
+                              ),
+                              trailing: ElevatedButton(
+                                onPressed: () {
+                                  // Accept ride logic
+                                  rideProvider.acceptRide(ride.id, 'token');
+                                },
+                                child: const Text('Accept'),
+                              ),
+                            ),
+                          )),
                     ],
                   );
                 },

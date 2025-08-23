@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -34,7 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = authProvider.currentUser;
     if (user != null) {
       _nameController.text = user.name;
-      _phoneController.text = user.phone ?? '';
+      _phoneController.text = user.phone;
     }
   }
 
@@ -45,16 +46,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _isLoading = true;
     });
 
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final updates = {
-        'name': _nameController.text.trim(),
-        'phone': _phoneController.text.trim(),
-      };
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final updates = {
+      'name': _nameController.text.trim(),
+      'phone': _phoneController.text.trim(),
+    };
 
-      await authProvider.updateProfile(updates);
+    await authProvider.updateProfile(updates);
 
-      if (mounted) {
+    if (mounted) {
+      // After the call, check the provider's error state
+      if (authProvider.error == null) {
         setState(() {
           _isEditing = false;
         });
@@ -64,22 +66,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             backgroundColor: Colors.green,
           ),
         );
-      }
-    } catch (e) {
-      if (mounted) {
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating profile: $e'),
+            content: Text('Update failed: ${authProvider.error}'),
             backgroundColor: Colors.red,
           ),
         );
+        // It's good practice to clear the error in the provider after showing it
+        authProvider.clearError();
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -107,7 +107,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await authProvider.logout();
 
       // Navigate back to login screen
-      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
     }
   }
 
@@ -179,10 +182,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        if (user.phone != null) ...[
+                        if (user.phone.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Text(
-                            user.phone!,
+                            user.phone,
                             style: TextStyle(
                               color: Theme.of(context)
                                   .colorScheme

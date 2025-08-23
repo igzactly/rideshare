@@ -55,7 +55,8 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String email, String password,
+      {bool rememberMe = false}) async {
     try {
       _isLoading = true;
       _error = null;
@@ -66,7 +67,9 @@ class AuthProvider extends ChangeNotifier {
       if (response['success'] == true) {
         _token = response['token'];
         _currentUser = User.fromJson(response['user']);
-        await _saveAuthData();
+        if (rememberMe) {
+          await _saveAuthData();
+        }
         _isLoading = false;
         notifyListeners();
         return true;

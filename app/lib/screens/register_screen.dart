@@ -77,7 +77,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 20),
 
               // Logo or Icon
-              Icon(
+              const Icon(
                 Icons.car_rental,
                 size: 80,
                 color: AppTheme.primaryColor,
@@ -256,7 +256,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.drive_eta,
                         color: AppTheme.primaryColor,
                       ),
@@ -347,7 +347,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onPressed: () {
                       Navigator.of(context).pop();
                     },
-                    child: Text(
+                    child: const Text(
                       'Sign In',
                       style: TextStyle(
                         color: AppTheme.primaryColor,

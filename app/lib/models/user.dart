@@ -32,10 +32,8 @@ class User {
       profileImage: json['profile_image'],
       isDriver: json['is_driver'] ?? false,
       isVerified: json['is_verified'] ?? false,
-      createdAt: DateTime.parse(
-          json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(
-          json['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
       preferences: json['preferences'],
     );
   }

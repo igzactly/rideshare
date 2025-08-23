@@ -356,7 +356,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.error_outline,
                           size: 64,
                           color: AppTheme.errorColor,
@@ -392,7 +392,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.directions_car_outlined,
                           size: 64,
                           color: AppTheme.textSecondaryColor,
