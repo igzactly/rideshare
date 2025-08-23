@@ -1,14 +1,14 @@
-# FastAPI Core
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
+# Web server
+Flask==3.0.3
+flask-cors==4.0.0
+gunicorn==21.2.0
 
 # Database
 motor==3.3.2
 beanie==1.24.0
 pymongo==4.6.0
 
-# Authentication
-fastapi-users[beanie]==12.1.3
+# Authentication (kept for compatibility; safe to remove after full port)
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 
