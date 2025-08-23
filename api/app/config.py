@@ -1,7 +1,6 @@
 import os
 import json
-from typing import List, Union
-from pydantic import field_validator
+from typing import List
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -20,30 +19,22 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "RideShare API"
     
-    # CORS Configuration
-    BACKEND_CORS_ORIGINS: List[str] = ["*"]
+    # CORS Configuration (raw string from env)
+    BACKEND_CORS_ORIGINS: str = os.getenv("BACKEND_CORS_ORIGINS", "*")
 
-    # Accept comma-separated string, JSON array string, or list for CORS origins
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, value: Union[str, List[str]]):
-        if value is None:
+    @property
+    def cors_origins_list(self) -> List[str]:
+        raw = (self.BACKEND_CORS_ORIGINS or "").strip()
+        if raw == "" or raw == "*":
             return ["*"]
-        if isinstance(value, list):
-            return value
-        if isinstance(value, str):
-            stripped = value.strip()
-            if stripped == "" or stripped == "*":
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(v) for v in parsed]
+            except Exception:
                 return ["*"]
-            if stripped.startswith("["):
-                try:
-                    parsed = json.loads(stripped)
-                    if isinstance(parsed, list):
-                        return [str(v) for v in parsed]
-                except Exception:
-                    pass
-            return [v.strip() for v in stripped.split(",") if v.strip()]
-        return ["*"]
+        return [v.strip() for v in raw.split(",") if v.strip()]
     
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
