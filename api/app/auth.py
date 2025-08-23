@@ -2,7 +2,7 @@ import uuid
 from typing import Optional
 
 from fastapi_users import schemas
-from fastapi_users.db import BeanieBaseUser, BeanieUserDatabase
+from fastapi_users_db_beanie import BeanieBaseUser, BeanieUserDatabase
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
@@ -10,17 +10,20 @@ from fastapi_users.authentication import (
 )
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.config import settings
+from beanie import Document
 
 client = AsyncIOMotorClient(settings.MONGODB_URL, uuidRepresentation="standard")
 db = client[settings.MONGODB_DB]
-collection = db["users"]
 
 class User(BeanieBaseUser[uuid.UUID]):
     is_driver: bool = False
     is_verified_driver: bool = False
 
+    class Settings:
+        name = "users"
+
 async def get_user_db():
-    yield BeanieUserDatabase(User, collection)
+    yield BeanieUserDatabase(User)
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
     is_driver: bool

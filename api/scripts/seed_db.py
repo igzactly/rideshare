@@ -1,152 +1,60 @@
-import asyncio
+
 import os
-from datetime import datetime, timedelta
-from motor.motor_asyncio import AsyncIOMotorClient
-from bson import ObjectId
-import uuid
-import random
+import sys
+from pymongo import MongoClient
+from dotenv import load_dotenv
 
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
-MONGODB_DB = os.getenv("MONGODB_DB", "rideshare")
+# Add the parent directory to the path to allow imports from the `api` module
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-async def seed():
-    client = AsyncIOMotorClient(MONGODB_URL)
-    db = client[MONGODB_DB]
+from generate_sample_data import generate_users, generate_rides, generate_driver_locations
 
-    users = db["users"]
-    user_profiles = db["user_profiles"]
-    drivers = db["drivers"]
-    rides = db["rides"]
-    payments = db["payments"]
-    feedback = db["feedback"]
-    locations = db["locations"]
+load_dotenv()
 
-    # Clean existing
-    for col in [users, user_profiles, drivers, rides, payments, feedback, locations]:
-        await col.delete_many({})
+def seed_database():
+    mongodb_url = os.getenv("MONGODB_URL")
+    mongodb_db = os.getenv("MONGODB_DB")
 
-    # Create users
-    driver_id = ObjectId()
-    passenger_id = ObjectId()
+    if not mongodb_url or not mongodb_db:
+        print("MONGODB_URL and MONGODB_DB environment variables must be set.")
+        return
 
-    await users.insert_many([
-        {
-            "_id": driver_id,
-            "email": "driver@example.com",
-            "hashed_password": "$2b$12$CwTycUXWue0Thq9StjUM0uJ8YH2u7o1uT5C2Xj8T0Weu3bXKj2p9C",  # bcrypt for 'password'
-            "is_active": True,
-            "is_superuser": False,
-            "is_driver": True,
-            "is_verified_driver": True,
-        },
-        {
-            "_id": passenger_id,
-            "email": "passenger@example.com",
-            "hashed_password": "$2b$12$CwTycUXWue0Thq9StjUM0uJ8YH2u7o1uT5C2Xj8T0Weu3bXKj2p9C",
-            "is_active": True,
-            "is_superuser": False,
-            "is_driver": False,
-            "is_verified_driver": False,
-        },
-    ])
+    client = MongoClient(mongodb_url)
+    db = client[mongodb_db]
 
-    # Profiles
-    await user_profiles.insert_many([
-        {
-            "user_id": driver_id,
-            "first_name": "Derek",
-            "last_name": "Driver",
-            "phone": "+441234567890",
-            "rating": 4.8,
-            "total_rides": 123,
-            "is_verified": True,
-            "created_at": datetime.utcnow(),
-        },
-        {
-            "user_id": passenger_id,
-            "first_name": "Paula",
-            "last_name": "Passenger",
-            "phone": "+441098765432",
-            "rating": 4.6,
-            "total_rides": 45,
-            "is_verified": True,
-            "created_at": datetime.utcnow(),
-        },
-    ])
+    # Drop existing collections
+    db.users.drop()
+    db.rides.drop()
+    db.driver_locations.drop()
 
-    # Driver route/state
-    await drivers.insert_one({
-        "user_id": driver_id,
-        "start_location": [51.5074, -0.1278],  # London
-        "end_location": [51.509, -0.08],
-        "departure_time": datetime.utcnow() + timedelta(hours=1),
-        "available_seats": 3,
-        "status": "active",
-        "is_online": True,
-        "rating": 4.8,
-        "vehicle_type": "car",
-        "created_at": datetime.utcnow(),
-    })
+    print("Cleared existing data.")
 
-    # Ride
-    ride_id = ObjectId()
-    await rides.insert_one({
-        "_id": ride_id,
-        "driver_id": driver_id,
-        "passenger_id": passenger_id,
-        "pickup": "Waterloo Station",
-        "dropoff": "Canary Wharf",
-        "pickup_coords": [51.5033, -0.1147],
-        "dropoff_coords": [51.5054, -0.0235],
-        "status": "active",
-        "pickup_time": datetime.utcnow() + timedelta(minutes=30),
-        "created_at": datetime.utcnow(),
-        "fare": 12.5,
-        "total_distance_km": 8.2,
-        "duration_minutes": 25,
-    })
+    # Generate and insert users
+    users_data = generate_users(20)
+    result = db.users.insert_many(users_data)
+    user_ids = result.inserted_ids
+    for i, user_id in enumerate(user_ids):
+        users_data[i]["_id"] = user_id
 
-    # Payment
-    await payments.insert_one({
-        "ride_id": ride_id,
-        "user_id": passenger_id,
-        "amount": 12.5,
-        "currency": "GBP",
-        "status": "pending",
-        "created_at": datetime.utcnow(),
-    })
+    print(f"Inserted {len(user_ids)} users.")
 
-    # Feedback
-    await feedback.insert_one({
-        "ride_id": ride_id,
-        "from_user_id": passenger_id,
-        "to_user_id": driver_id,
-        "rating": 5,
-        "comment": "Great ride, very punctual!",
-        "category": "punctuality",
-        "created_at": datetime.utcnow(),
-    })
+    # Generate and insert rides
+    rides_data = generate_rides(users_data, 50)
+    db.rides.insert_many(rides_data)
+    print(f"Inserted {len(rides_data)} rides.")
 
-    # Location breadcrumbs
-    now = datetime.utcnow()
-    coords = [
-        [51.5033, -0.1147],
-        [51.5040, -0.1050],
-        [51.5050, -0.0900],
-        [51.5054, -0.0235],
-    ]
-    docs = []
-    for i, c in enumerate(coords):
-        docs.append({
-            "user_id": driver_id,
-            "ride_id": ride_id,
-            "coordinates": c,
-            "timestamp": now + timedelta(minutes=i*5),
-            "accuracy": 5.0,
-        })
-    await locations.insert_many(docs)
+    # Generate and insert driver locations
+    driver_locations_data = generate_driver_locations(users_data)
+    if driver_locations_data:
+        db.driver_locations.insert_many(driver_locations_data)
+        print(f"Inserted {len(driver_locations_data)} driver locations.")
 
-    print("Seed completed. Users: driver@example.com / passenger@example.com (password: password)")
+        # Create 2dsphere index for geospatial queries
+        db.driver_locations.create_index([("location", "2dsphere")])
+        print("Created 2dsphere index on driver_locations.")
+
+    client.close()
+    print("Database seeding complete.")
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    seed_database()
