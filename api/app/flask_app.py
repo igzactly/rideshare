@@ -34,4 +34,11 @@ def root():
 def healthz():
     return jsonify({"status": "ok"})
 
+# Register blueprints (incrementally ported)
+try:
+    from app.blueprints.rides import bp as rides_bp
+    app.register_blueprint(rides_bp)
+except Exception:
+    pass
+
 
