@@ -1,42 +1,5 @@
 version: '3.8'
 services:
-  mongo:
-    image: mongo:7
-    container_name: rideshare-mongo
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:27017:27017"  # Bind to localhost only for security
-    environment:
-      MONGO_INITDB_DATABASE: ${MONGODB_DB:-rideshare}
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeme123}
-    volumes:
-      - mongo_data:/data/db
-      - mongo_config:/data/configdb
-    command: --auth --bind_ip_all
-    networks:
-      - rideshare-network
-
-  mongo-express:
-    image: mongo-express:1.0.2-20
-    container_name: rideshare-mongo-express
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8081:8081"  # Bind to localhost only
-    environment:
-      ME_CONFIG_MONGODB_SERVER: mongo
-      ME_CONFIG_MONGODB_PORT: 27017
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USERNAME:-admin}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-changeme123}
-      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME:-admin}
-      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-admin123}
-    depends_on:
-      - mongo
-    networks:
-      - rideshare-network
-    profiles:
-      - dev  # Only start in dev profile
-
   api:
     build: 
       context: .
@@ -44,9 +7,9 @@ services:
     container_name: rideshare-api
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8000:8000"  # Bind to localhost only (Nginx will proxy)
+      - "0.0.0.0:8000:8000"
     environment:
-      MONGODB_URL: ${MONGODB_URL:-mongodb://admin:changeme123@mongo:27017/rideshare?authSource=admin}
+      MONGODB_URL: ${MONGODB_URL}
       MONGODB_DB: ${MONGODB_DB:-rideshare}
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
@@ -62,8 +25,6 @@ services:
       OPTIMIZATION_TIMEOUT: ${OPTIMIZATION_TIMEOUT:-30}
       NOTIFICATION_RETENTION_DAYS: ${NOTIFICATION_RETENTION_DAYS:-90}
       MAX_NOTIFICATIONS_PER_USER: ${MAX_NOTIFICATIONS_PER_USER:-1000}
-    depends_on:
-      - mongo
     volumes:
       - ./app:/app/app:ro
       - app_logs:/app/logs
@@ -92,10 +53,6 @@ services:
       - prod  # Only in production
 
 volumes:
-  mongo_data:
-    driver: local
-  mongo_config:
-    driver: local
   redis_data:
     driver: local
   app_logs:
