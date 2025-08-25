@@ -35,10 +35,15 @@ def healthz():
     return jsonify({"status": "ok"})
 
 # Register blueprints (incrementally ported)
-try:
-    from app.blueprints.rides import bp as rides_bp
-    app.register_blueprint(rides_bp)
-except Exception:
-    pass
+from app.blueprints.rides import bp as rides_bp
+app.register_blueprint(rides_bp)
+
+# Debug route to list endpoints (optional)
+@app.route("/__routes__")
+def list_routes():
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({"rule": str(rule), "endpoint": rule.endpoint, "methods": sorted(rule.methods)})
+    return jsonify(routes)
 
 

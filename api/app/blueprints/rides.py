@@ -7,6 +7,7 @@ bp = Blueprint("rides", __name__, url_prefix="/rides")
 
 
 @bp.post("/")
+@bp.post("")
 def create_ride():
     payload = request.get_json(force=True)
     payload["created_at"] = datetime.utcnow()
