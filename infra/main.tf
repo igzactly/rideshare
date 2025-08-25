@@ -65,6 +65,12 @@ module "mongodb" {
   
   environment = var.environment
   project_id = var.mongodb_atlas_project_id
+  
+  # Pass-through configuration
+  provider_region     = var.mongodb_provider_region
+  instance_size       = var.mongodb_instance_size
+  database_password   = var.mongodb_database_password
+  allowed_cidr_blocks = var.mongodb_allowed_cidr_blocks
 }
 
 # Application Load Balancer

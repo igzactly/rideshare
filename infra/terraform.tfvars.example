@@ -19,6 +19,12 @@ mongodb_atlas_public_key  = "your_mongodb_atlas_public_key"
 mongodb_atlas_private_key = "your_mongodb_atlas_private_key"
 mongodb_atlas_project_id  = "your_mongodb_atlas_project_id"
 
+# MongoDB Atlas Cluster Settings (optional overrides)
+mongodb_provider_region     = "EU_WEST_1"   # Matches your Atlas project's region
+mongodb_instance_size       = "M0"          # Free tier for dev; use M10+ for prod
+mongodb_database_password   = "your_secure_db_password"
+mongodb_allowed_cidr_blocks = "0.0.0.0/0"   # Narrow to office/Egress IP for prod
+
 # Application Secrets
 jwt_secret = "your_jwt_secret_key_here"
 mapbox_access_token = "your_mapbox_access_token"

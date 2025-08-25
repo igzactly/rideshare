@@ -63,6 +63,31 @@ variable "mongodb_atlas_project_id" {
   type        = string
 }
 
+# MongoDB Atlas module pass-through variables
+variable "mongodb_provider_region" {
+  description = "AWS region name used by MongoDB Atlas (e.g. EU_WEST_1)"
+  type        = string
+  default     = "EU_WEST_1"
+}
+
+variable "mongodb_instance_size" {
+  description = "MongoDB Atlas instance size (e.g. M0, M10)"
+  type        = string
+  default     = "M0"
+}
+
+variable "mongodb_database_password" {
+  description = "Password for the MongoDB Atlas database user"
+  type        = string
+  sensitive   = true
+}
+
+variable "mongodb_allowed_cidr_blocks" {
+  description = "CIDR blocks allowed to access MongoDB Atlas (e.g. 0.0.0.0/0)"
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
 variable "mapbox_access_token" {
   description = "Mapbox access token for mapping services"
   type        = string

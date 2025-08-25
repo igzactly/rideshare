@@ -6,7 +6,7 @@ gunicorn==21.2.0
 # Database
 motor==3.3.2
 beanie==1.24.0
-pymongo==4.6.0
+pymongo[srv]
 
 # Authentication (kept for compatibility; safe to remove after full port)
 python-jose[cryptography]==3.3.0
@@ -26,3 +26,5 @@ websockets==12.0
 
 # Development/Testing
 Faker==25.2.0
+
+dnspython==2.6.1
