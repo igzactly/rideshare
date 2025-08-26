@@ -16,3 +16,12 @@ def to_serializable(value):
 
 def serialize_doc(doc: dict) -> dict:
     return to_serializable(doc or {})
+
+
+def serialize_with_renamed_id(doc: dict) -> dict:
+    if not doc:
+        return {}
+    doc = dict(doc)
+    if doc.get("_id") is not None:
+        doc["id"] = str(doc.pop("_id"))
+    return to_serializable(doc)
