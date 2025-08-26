@@ -44,6 +44,8 @@ from app.blueprints.rides import bp as rides_bp
 app.register_blueprint(rides_bp)
 from app.blueprints.users import bp as users_bp
 app.register_blueprint(users_bp)
+from app.blueprints.auth import bp as auth_bp
+app.register_blueprint(auth_bp)
 from app.blueprints.drivers import bp as drivers_bp
 app.register_blueprint(drivers_bp)
 from app.blueprints.payments import bp as payments_bp
