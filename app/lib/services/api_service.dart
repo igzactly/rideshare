@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/ride.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://localhost:8000';
+  static const String _baseUrl = 'http://158.158.41.106:8000';
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',
   };

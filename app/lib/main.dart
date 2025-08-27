@@ -5,6 +5,9 @@ import 'package:rideshare_app/providers/auth_provider.dart';
 import 'package:rideshare_app/providers/ride_provider.dart';
 import 'package:rideshare_app/providers/location_provider.dart';
 import 'package:rideshare_app/screens/splash_screen.dart';
+import 'package:rideshare_app/screens/home_screen.dart';
+import 'package:rideshare_app/screens/login_screen.dart';
+import 'package:rideshare_app/screens/register_screen.dart';
 import 'package:rideshare_app/utils/theme.dart';
 
 void main() async {
@@ -34,6 +37,26 @@ class RideShareApp extends StatelessWidget {
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
         home: const SplashScreen(),
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/register': (context) => const RegisterScreen(),
+          '/home': (context) => const HomeScreen(),
+        },
+        onGenerateRoute: (settings) {
+          switch (settings.name) {
+            case '/login':
+              return MaterialPageRoute(builder: (_) => const LoginScreen());
+            case '/register':
+              return MaterialPageRoute(builder: (_) => const RegisterScreen());
+            case '/home':
+              return MaterialPageRoute(builder: (_) => const HomeScreen());
+            default:
+              return MaterialPageRoute(builder: (_) => const SplashScreen());
+          }
+        },
+        onUnknownRoute: (settings) {
+          return MaterialPageRoute(builder: (_) => const SplashScreen());
+        },
       ),
     );
   }

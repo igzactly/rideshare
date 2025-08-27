@@ -67,15 +67,15 @@ class RideProvider extends ChangeNotifier {
 
       final response = await ApiService.createRide(rideData, token);
 
-      if (response['success'] == true) {
-        final newRide = Ride.fromJson(response['ride']);
+      if (response['_id'] != null || response['id'] != null) {
+        final newRide = Ride.fromJson(response);
         _userRides.add(newRide);
         _currentRide = newRide;
         _isLoading = false;
         notifyListeners();
         return true;
       } else {
-        _error = response['message'] ?? 'Failed to create ride';
+        _error = response['detail'] ?? 'Failed to create ride';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -96,26 +96,13 @@ class RideProvider extends ChangeNotifier {
 
       final response = await ApiService.acceptRide(rideId, token);
 
-      if (response['success'] == true) {
-        final updatedRide = Ride.fromJson(response['ride']);
-
-        // Update the ride in available rides
-        final index = _availableRides.indexWhere((ride) => ride.id == rideId);
-        if (index != -1) {
-          _availableRides[index] = updatedRide;
-        }
-
-        // Add to user rides if not already there
-        if (!_userRides.any((ride) => ride.id == rideId)) {
-          _userRides.add(updatedRide);
-        }
-
-        _currentRide = updatedRide;
+      if (response['message'] != null && response['message'].contains('accepted')) {
+        // Ride was accepted successfully
         _isLoading = false;
         notifyListeners();
         return true;
       } else {
-        _error = response['message'] ?? 'Failed to accept ride';
+        _error = response['detail'] ?? 'Failed to accept ride';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -140,33 +127,13 @@ class RideProvider extends ChangeNotifier {
 
       final response = await ApiService.updateRideStatus(rideId, status, token);
 
-      if (response['success'] == true) {
-        final updatedRide = Ride.fromJson(response['ride']);
-
-        // Update ride in user rides
-        final userRideIndex =
-            _userRides.indexWhere((ride) => ride.id == rideId);
-        if (userRideIndex != -1) {
-          _userRides[userRideIndex] = updatedRide;
-        }
-
-        // Update ride in available rides
-        final availableRideIndex =
-            _availableRides.indexWhere((ride) => ride.id == rideId);
-        if (availableRideIndex != -1) {
-          _availableRides[availableRideIndex] = updatedRide;
-        }
-
-        // Update current ride if it's the same
-        if (_currentRide?.id == rideId) {
-          _currentRide = updatedRide;
-        }
-
+      if (response['message'] != null && response['message'].contains('updated')) {
+        // Status was updated successfully
         _isLoading = false;
         notifyListeners();
         return true;
       } else {
-        _error = response['message'] ?? 'Failed to update ride status';
+        _error = response['detail'] ?? 'Failed to update ride status';
         _isLoading = false;
         notifyListeners();
         return false;

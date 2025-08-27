@@ -64,8 +64,8 @@ class AuthProvider extends ChangeNotifier {
 
       final response = await ApiService.login(email, password);
 
-      if (response['success'] == true) {
-        _token = response['token'];
+      if (response['access_token'] != null) {
+        _token = response['access_token'];
         _currentUser = User.fromJson(response['user']);
         if (rememberMe) {
           await _saveAuthData();
@@ -74,7 +74,7 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _error = response['message'] ?? 'Login failed';
+        _error = response['detail'] ?? 'Login failed';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -96,15 +96,15 @@ class AuthProvider extends ChangeNotifier {
 
       final response = await ApiService.register(name, email, password, phone);
 
-      if (response['success'] == true) {
-        _token = response['token'];
+      if (response['access_token'] != null) {
+        _token = response['access_token'];
         _currentUser = User.fromJson(response['user']);
         await _saveAuthData();
         _isLoading = false;
         notifyListeners();
         return true;
       } else {
-        _error = response['message'] ?? 'Registration failed';
+        _error = response['detail'] ?? 'Registration failed';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -141,12 +141,14 @@ class AuthProvider extends ChangeNotifier {
 
       final response = await ApiService.updateProfile(updates, _token!);
 
-      if (response['success'] == true) {
-        _currentUser = User.fromJson(response['user']);
+      if (response['access_token'] != null || response['user'] != null) {
+        if (response['user'] != null) {
+          _currentUser = User.fromJson(response['user']);
+        }
         await _saveAuthData();
         _error = null;
       } else {
-        _error = response['message'] ?? 'Profile update failed';
+        _error = response['detail'] ?? 'Profile update failed';
       }
     } catch (e) {
       _error = 'Network error: $e';

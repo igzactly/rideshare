@@ -105,6 +105,17 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
 
       final rideProvider = Provider.of<RideProvider>(context, listen: false);
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      if (authProvider.token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to create a ride'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
       final success =
           await rideProvider.createRide(rideData, authProvider.token!);
 
