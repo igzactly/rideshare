@@ -1,5 +1,6 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+from datetime import datetime
 try:
     # Reuse existing settings for env variables
     from app.config import settings
@@ -22,10 +23,16 @@ def root():
     return jsonify({
         "message": "Welcome to RideShare API (Flask)",
         "version": "1.0.0",
+        "status": "active",
         "features": [
-            "Health checks",
+            "Authentication (/auth/*)",
+            "Ride Management (/rides/*)",
+            "User Management (/users/*)",
+            "Driver Operations (/driver/*)",
+            "Payment Handling (/payments/*)",
+            "Safety Features (/safety/*)",
+            "Health checks (/health)",
             "CORS enabled",
-            "Ready for route migration from FastAPI",
         ]
     })
 
@@ -37,7 +44,12 @@ def healthz():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok"})
+    return jsonify({
+        "status": "ok",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "RideShare API",
+        "version": "1.0.0"
+    })
 
 @app.route("/test")
 def test():
@@ -81,6 +93,21 @@ try:
 except Exception as e:
     print(f"Failed to load safety blueprint: {e}")
 
+# Add location endpoint for Flutter app
+@app.route("/location/update", methods=["POST"])
+def update_location():
+    """Update user location - simple endpoint for Flutter app"""
+    try:
+        data = request.get_json(force=True)
+        # For now, just acknowledge the update
+        # In production, you'd store this in the database
+        return jsonify({
+            "message": "Location updated successfully",
+            "timestamp": datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({"detail": f"Error updating location: {str(e)}"}), 400
+
 # Debug route to list endpoints (optional)
 @app.route("/__routes__")
 def list_routes():
@@ -88,5 +115,26 @@ def list_routes():
     for rule in app.url_map.iter_rules():
         routes.append({"rule": str(rule), "endpoint": rule.endpoint, "methods": sorted(rule.methods)})
     return jsonify(routes)
+
+# Error handlers for consistent error responses
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"detail": "Endpoint not found"}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({"detail": "Internal server error"}), 500
+
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({"detail": "Bad request"}), 400
+
+@app.errorhandler(401)
+def unauthorized(error):
+    return jsonify({"detail": "Unauthorized"}), 401
+
+@app.errorhandler(403)
+def forbidden(error):
+    return jsonify({"detail": "Forbidden"}), 403
 
 

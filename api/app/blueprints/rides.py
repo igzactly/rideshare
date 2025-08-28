@@ -77,7 +77,7 @@ def create_ride():
             payload[ref_field] = ObjectId(payload[ref_field])
     res = rides_collection.insert_one(payload)
     doc = rides_collection.find_one({"_id": res.inserted_id})
-    return jsonify({"success": True, "ride": serialize_with_renamed_id(doc)}), 201
+    return jsonify(serialize_with_renamed_id(doc)), 201
 
 
 @bp.get("/")
@@ -133,7 +133,7 @@ def delete_ride(ride_id: str):
     result = rides_collection.delete_one({"_id": ObjectId(ride_id)})
     if result.deleted_count == 0:
         return jsonify({"detail": "Ride not found"}), 404
-    return jsonify({"deleted": True})
+    return jsonify({"message": "Ride deleted successfully"})
 
 
 @bp.get("/search")
@@ -205,6 +205,16 @@ def get_user_rides():
     docs = [serialize_with_renamed_id(d) for d in rides_collection.find(query).limit(limit)]
     return jsonify({"rides": docs})
 
+@bp.get("/user/<user_id>")
+def get_user_rides_by_id(user_id: str):
+    """Get rides for a specific user by ID in the URL path"""
+    if not ObjectId.is_valid(user_id):
+        return jsonify({"detail": "Invalid user ID"}), 400
+    query = {"$or": [{"passenger_id": ObjectId(user_id)}, {"driver_id": ObjectId(user_id)}]}
+    limit = min(int(request.args.get("limit", 50)), 200)
+    docs = [serialize_with_renamed_id(d) for d in rides_collection.find(query).limit(limit)]
+    return jsonify({"rides": docs})
+
 
 @bp.post("/<ride_id>/accept")
 def accept_ride_route(ride_id: str):
@@ -218,9 +228,9 @@ def accept_ride_route(ride_id: str):
         update["driver_id"] = ObjectId(driver_id)
     result = rides_collection.update_one(query, {"$set": update})
     if result.modified_count == 0:
-        return jsonify({"success": False, "message": "Ride not found or cannot accept"}), 404
+        return jsonify({"detail": "Ride not found or cannot accept"}), 404
     doc = rides_collection.find_one({"_id": ObjectId(ride_id)})
-    return jsonify({"success": True, "ride": serialize_with_renamed_id(doc)})
+    return jsonify({"message": "Ride accepted successfully"})
 
 
 @bp.put("/<ride_id>/status")
@@ -238,6 +248,6 @@ def update_ride_status_route(ride_id: str):
     if result.modified_count == 0:
         return jsonify({"detail": "Ride not found or no change"}), 404
     doc = rides_collection.find_one({"_id": ObjectId(ride_id)})
-    return jsonify({"success": True, "ride": serialize_with_renamed_id(doc)})
+    return jsonify({"message": "Ride status updated successfully"})
 
 
