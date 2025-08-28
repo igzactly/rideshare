@@ -139,14 +139,10 @@ class ApiService {
     String token,
   ) async {
     try {
-      final queryParams = searchParams.entries
-          .where((entry) => entry.value != null)
-          .map((entry) => '${entry.key}=${entry.value}')
-          .join('&');
-
-      final response = await http.get(
-        Uri.parse('$_baseUrl/rides/search?$queryParams'),
+      final response = await http.post(
+        Uri.parse('$_baseUrl/rides/find'),
         headers: _getAuthHeaders(token),
+        body: jsonEncode(searchParams),
       );
 
       if (response.statusCode == 200) {
