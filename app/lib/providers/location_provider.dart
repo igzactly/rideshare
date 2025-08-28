@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import '../services/api_service.dart';
-
-// Simple location model to replace latlong2 dependency
-class LatLng {
-  final double latitude;
-  final double longitude;
-
-  LatLng(this.latitude, this.longitude);
-}
 
 class LocationProvider extends ChangeNotifier {
   LatLng? _currentLocation;

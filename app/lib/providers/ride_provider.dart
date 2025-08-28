@@ -146,6 +146,37 @@ class RideProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> deleteRide(String rideId, String token) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await ApiService.deleteRide(rideId, token);
+
+      if (response['message'] != null && response['message'].contains('deleted')) {
+        // Ride was deleted successfully
+        _userRides.removeWhere((ride) => ride.id == rideId);
+        if (_currentRide?.id == rideId) {
+          _currentRide = null;
+        }
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = response['detail'] ?? 'Failed to delete ride';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   void setCurrentRide(Ride? ride) {
     _currentRide = ride;
     notifyListeners();

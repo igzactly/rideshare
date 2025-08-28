@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/ride_provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/location_picker.dart';
+import 'package:latlong2/latlong.dart';
 
 class DriverModeScreen extends StatefulWidget {
   const DriverModeScreen({super.key});
@@ -13,9 +15,9 @@ class DriverModeScreen extends StatefulWidget {
 
 class _DriverModeScreenState extends State<DriverModeScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _destinationController = TextEditingController();
+  final _pickupController = TextEditingController();
+  final _dropoffController = TextEditingController();
   final _departureTimeController = TextEditingController();
-  final _seatsController = TextEditingController();
   final _priceController = TextEditingController();
 
   DateTime? _selectedDepartureTime;
@@ -24,16 +26,17 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
 
   @override
   void dispose() {
-    _destinationController.dispose();
+    _pickupController.dispose();
+    _dropoffController.dispose();
     _departureTimeController.dispose();
-    _seatsController.dispose();
     _priceController.dispose();
     super.dispose();
   }
 
   Future<void> _selectDepartureTime() async {
+    final navigatorContext = context;
     final DateTime? picked = await showDatePicker(
-      context: context,
+      context: navigatorContext,
       initialDate: DateTime.now().add(const Duration(hours: 1)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 7)),
@@ -41,7 +44,7 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
 
     if (picked != null) {
       final TimeOfDay? timePicked = await showTimePicker(
-        context: context,
+        context: navigatorContext,
         initialTime: TimeOfDay.now(),
       );
 
@@ -55,7 +58,7 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
             timePicked.minute,
           );
           _departureTimeController.text =
-              '${_selectedDepartureTime!.day}/${_selectedDepartureTime!.month}/${_selectedDepartureTime!.year} at ${timePicked.format(context)}';
+              '${_selectedDepartureTime!.day}/${_selectedDepartureTime!.month}/${_selectedDepartureTime!.year} at ${timePicked.format(navigatorContext)}';
         });
       }
     }
@@ -77,30 +80,42 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
     try {
       final locationProvider =
           Provider.of<LocationProvider>(context, listen: false);
-      final currentLocation = locationProvider.currentLocation;
-
-      if (currentLocation == null) {
+      
+      // Check if pickup and dropoff locations are set
+      if (locationProvider.pickupLocation == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to get current location')),
+          const SnackBar(
+            content: Text('Please select a pickup location'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      
+      if (locationProvider.dropoffLocation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a dropoff location'),
+            backgroundColor: Colors.orange,
+          ),
         );
         return;
       }
 
       final rideData = {
-        'origin': {
-          'latitude': currentLocation.latitude,
-          'longitude': currentLocation.longitude,
-          'address': 'Current Location',
+        'pickup_location': {
+          'latitude': locationProvider.pickupLocation!.latitude,
+          'longitude': locationProvider.pickupLocation!.longitude,
         },
-        'destination': {
-          'latitude': 0.0, // TODO: Implement geocoding
-          'longitude': 0.0,
-          'address': _destinationController.text,
+        'dropoff_location': {
+          'latitude': locationProvider.dropoffLocation!.latitude,
+          'longitude': locationProvider.dropoffLocation!.longitude,
         },
-        'departureTime': _selectedDepartureTime!.toIso8601String(),
-        'availableSeats': int.parse(_seatsController.text),
-        'pricePerSeat': double.parse(_priceController.text),
-        'type': 'driver_offered',
+        'pickup_address': _pickupController.text,
+        'dropoff_address': _dropoffController.text,
+        'pickup_time': _selectedDepartureTime!.toIso8601String(),
+        'ride_type': 'driver',
+        'price_per_seat': double.parse(_priceController.text),
       };
 
       final rideProvider = Provider.of<RideProvider>(context, listen: false);
@@ -148,13 +163,17 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
 
   void _clearForm() {
     _formKey.currentState?.reset();
-    _destinationController.clear();
+    _pickupController.clear();
+    _dropoffController.clear();
     _departureTimeController.clear();
-    _seatsController.clear();
     _priceController.clear();
     setState(() {
       _selectedDepartureTime = null;
     });
+    
+    // Clear location provider locations
+    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+    locationProvider.clearLocations();
   }
 
   void _toggleOnlineStatus() {
@@ -239,19 +258,222 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Destination
-                      TextFormField(
-                        controller: _destinationController,
-                        decoration: const InputDecoration(
-                          labelText: 'Destination',
-                          hintText: 'Where are you going?',
-                          prefixIcon: Icon(Icons.location_on),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter destination';
+                      // Current Location Button
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final locationProvider = context.read<LocationProvider>();
+                          await locationProvider.getCurrentLocation();
+                          
+                          if (locationProvider.currentLocation != null) {
+                            setState(() {
+                              _pickupController.text = 'Current Location';
+                            });
+                            locationProvider.setPickupLocation(
+                              locationProvider.currentLocation!,
+                              'Current Location',
+                            );
                           }
-                          return null;
+                        },
+                        icon: const Icon(Icons.my_location),
+                        label: const Text('Use Current Location as Pickup'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue[100],
+                          foregroundColor: Colors.blue[800],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Pickup Location
+                      InkWell(
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => LocationPicker(
+                                title: 'Select Pickup Location',
+                                initialAddress: _pickupController.text,
+                                initialLocation: context.read<LocationProvider>().pickupLocation != null
+                                    ? LatLng(
+                                        context.read<LocationProvider>().pickupLocation!.latitude,
+                                        context.read<LocationProvider>().pickupLocation!.longitude,
+                                      )
+                                    : null,
+                                onLocationSelected: (location, address) {
+                                  setState(() {
+                                    _pickupController.text = address;
+                                  });
+                                  context.read<LocationProvider>().setPickupLocation(
+                                    LatLng(location.latitude, location.longitude),
+                                    address,
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_on, color: Colors.blue),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Pickup Location',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _pickupController.text.isEmpty
+                                          ? 'Tap to select pickup location'
+                                          : _pickupController.text,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: _pickupController.text.isEmpty
+                                            ? Colors.grey[400]
+                                            : Colors.black,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.arrow_forward_ios, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Dropoff Location
+                      InkWell(
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => LocationPicker(
+                                title: 'Select Dropoff Location',
+                                initialAddress: _dropoffController.text,
+                                initialLocation: context.read<LocationProvider>().dropoffLocation != null
+                                    ? LatLng(
+                                        context.read<LocationProvider>().dropoffLocation!.latitude,
+                                        context.read<LocationProvider>().dropoffLocation!.longitude,
+                                      )
+                                    : null,
+                                onLocationSelected: (location, address) {
+                                  setState(() {
+                                    _dropoffController.text = address;
+                                  });
+                                  context.read<LocationProvider>().setDropoffLocation(
+                                    LatLng(location.latitude, location.longitude),
+                                    address,
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_searching, color: Colors.green),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Dropoff Location',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _dropoffController.text.isEmpty
+                                          ? 'Tap to select destination'
+                                          : _dropoffController.text,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: _dropoffController.text.isEmpty
+                                            ? Colors.grey[400]
+                                            : Colors.black,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.arrow_forward_ios, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Location Status
+                      Consumer<LocationProvider>(
+                        builder: (context, locationProvider, child) {
+                          return Row(
+                            children: [
+                              Icon(
+                                locationProvider.pickupLocation != null 
+                                    ? Icons.check_circle 
+                                    : Icons.radio_button_unchecked,
+                                color: locationProvider.pickupLocation != null 
+                                    ? Colors.green 
+                                    : Colors.grey,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Pickup: ${locationProvider.pickupLocation != null ? "Selected" : "Not set"}',
+                                style: TextStyle(
+                                  color: locationProvider.pickupLocation != null 
+                                      ? Colors.green 
+                                      : Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(width: 24),
+                              Icon(
+                                locationProvider.dropoffLocation != null 
+                                    ? Icons.check_circle 
+                                    : Icons.radio_button_unchecked,
+                                color: locationProvider.dropoffLocation != null 
+                                    ? Colors.green 
+                                    : Colors.grey,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Dropoff: ${locationProvider.dropoffLocation != null ? "Selected" : "Not set"}',
+                                style: TextStyle(
+                                  color: locationProvider.dropoffLocation != null 
+                                      ? Colors.green 
+                                      : Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          );
                         },
                       ),
 
@@ -273,29 +495,6 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please select departure time';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Available Seats
-                      TextFormField(
-                        controller: _seatsController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Available Seats',
-                          hintText: 'How many seats?',
-                          prefixIcon: Icon(Icons.airline_seat_recline_normal),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter available seats';
-                          }
-                          final seats = int.tryParse(value);
-                          if (seats == null || seats < 1 || seats > 6) {
-                            return 'Please enter a valid number (1-6)';
                           }
                           return null;
                         },
@@ -330,7 +529,9 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _isOnline && !_isCreatingRide
+                          onPressed: _isOnline && !_isCreatingRide && 
+                                   _pickupController.text.isNotEmpty && 
+                                   _dropoffController.text.isNotEmpty
                               ? _createRide
                               : null,
                           style: ElevatedButton.styleFrom(
@@ -377,9 +578,21 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                     ),
                     const SizedBox(height: 16),
                     ListTile(
+                      leading: const Icon(Icons.directions_car),
+                      title: const Text('View My Rides'),
+                      subtitle: const Text('See, edit, or delete your offered rides'),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const DriverRidesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
                       leading: const Icon(Icons.history),
-                      title: const Text('View Ride History'),
-                      subtitle: const Text('See all your previous rides'),
+                      title: const Text('Ride History'),
+                      subtitle: const Text('See all your completed rides'),
                       onTap: () {
                         // Navigate to ride history
                       },

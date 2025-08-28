@@ -238,6 +238,32 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> deleteRide(
+    String rideId,
+    String token,
+  ) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/rides/$rideId'),
+        headers: _getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to delete ride: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
   // Driver endpoints
   static Future<Map<String, dynamic>> createDriverRoute(
     Map<String, dynamic> routeData,

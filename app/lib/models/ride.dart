@@ -1,10 +1,4 @@
-// Custom LatLng class to replace latlong2 dependency
-class LatLng {
-  final double latitude;
-  final double longitude;
-
-  LatLng(this.latitude, this.longitude);
-}
+import 'package:latlong2/latlong.dart';
 
 enum RideStatus {
   pending,

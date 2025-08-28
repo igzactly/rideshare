@@ -27,6 +27,8 @@ dependencies:
   # Location & Maps
   geolocator: ^10.1.0
   flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  geocoding: ^2.1.1
   
   # UI Components
   cupertino_icons: ^1.0.2
