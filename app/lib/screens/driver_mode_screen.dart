@@ -4,6 +4,7 @@ import '../providers/location_provider.dart';
 import '../providers/ride_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/location_picker.dart';
+import '../screens/driver_rides_screen.dart';
 import 'package:latlong2/latlong.dart';
 
 class DriverModeScreen extends StatefulWidget {
@@ -23,6 +24,18 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
   DateTime? _selectedDepartureTime;
   bool _isOnline = false;
   bool _isCreatingRide = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load user rides when entering driver mode
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.token != null) {
+        context.read<RideProvider>().loadUserRides(authProvider.token!);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -102,24 +115,29 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
         return;
       }
 
-      final rideData = {
-        'pickup_location': {
-          'latitude': locationProvider.pickupLocation!.latitude,
-          'longitude': locationProvider.pickupLocation!.longitude,
-        },
-        'dropoff_location': {
-          'latitude': locationProvider.dropoffLocation!.latitude,
-          'longitude': locationProvider.dropoffLocation!.longitude,
-        },
-        'pickup_address': _pickupController.text,
-        'dropoff_address': _dropoffController.text,
-        'pickup_time': _selectedDepartureTime!.toIso8601String(),
-        'ride_type': 'driver',
-        'price_per_seat': double.parse(_priceController.text),
-      };
+             final rideData = {
+         'pickup_location': {
+           'latitude': locationProvider.pickupLocation!.latitude,
+           'longitude': locationProvider.pickupLocation!.longitude,
+         },
+         'dropoff_location': {
+           'latitude': locationProvider.dropoffLocation!.latitude,
+           'longitude': locationProvider.dropoffLocation!.longitude,
+         },
+         'pickup_address': _pickupController.text,
+         'dropoff_address': _dropoffController.text,
+         'pickup_time': _selectedDepartureTime!.toIso8601String(),
+         'ride_type': 'driver',
+         'driver_id': null, // Will be set after authProvider is declared
+         'price': double.parse(_priceController.text),
+         'status': 'pending',
+       };
 
       final rideProvider = Provider.of<RideProvider>(context, listen: false);
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Set the driver_id after authProvider is declared
+      rideData['driver_id'] = authProvider.currentUser?.id;
       
       if (authProvider.token == null) {
         ScaffoldMessenger.of(context).showSnackBar(

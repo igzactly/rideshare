@@ -13,8 +13,17 @@ import 'package:rideshare_app/utils/theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
-  await dotenv.load(fileName: ".env");
+  // Load environment variables with fallback
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    // Fallback to default values if .env is not found
+    print("Warning: .env file not found, using default configuration");
+    // Set default values
+    dotenv.env['API_BASE_URL'] = 'http://158.158.41.106:8000';
+    dotenv.env['APP_NAME'] = 'RideShare';
+    dotenv.env['APP_VERSION'] = '1.0.0';
+  }
 
   runApp(const RideShareApp());
 }

@@ -60,8 +60,21 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 800));
     _fadeController.forward();
 
+    // Wait for auth provider to initialize and check stored session
     await Future.delayed(const Duration(seconds: 2));
+    await _waitForAuthInitialization();
     _checkAuthAndNavigate();
+  }
+
+  Future<void> _waitForAuthInitialization() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // Wait for auth provider to initialize
+    int attempts = 0;
+    while (!authProvider.isAuthenticated && attempts < 10) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      attempts++;
+    }
   }
 
   void _checkAuthAndNavigate() {

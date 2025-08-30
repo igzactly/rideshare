@@ -96,3 +96,31 @@ def login():
     })
 
 
+@bp.get("/validate")
+def validate_token():
+    """Validate the current user's token"""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"valid": False, "detail": "No valid authorization header"}), 401
+    
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        
+        if not user_id or not email:
+            return jsonify({"valid": False, "detail": "Invalid token payload"}), 401
+        
+        # Check if user still exists in database
+        user = users_collection.find_one({"_id": ObjectId(user_id), "email": email})
+        if not user:
+            return jsonify({"valid": False, "detail": "User not found"}), 401
+        
+        return jsonify({"valid": True, "user_id": user_id, "email": email})
+    except jwt.ExpiredSignatureError:
+        return jsonify({"valid": False, "detail": "Token expired"}), 401
+    except jwt.JWTError:
+        return jsonify({"valid": False, "detail": "Invalid token"}), 401
+
+

@@ -71,6 +71,10 @@ class RideProvider extends ChangeNotifier {
         final newRide = Ride.fromJson(response);
         _userRides.add(newRide);
         _currentRide = newRide;
+        // Also add to available rides if it's a driver ride
+        if (newRide.type == RideType.driver) {
+          _availableRides.add(newRide);
+        }
         _isLoading = false;
         notifyListeners();
         return true;
@@ -88,16 +92,24 @@ class RideProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> acceptRide(String rideId, String token) async {
+  Future<bool> acceptRide(String rideId, String token, String passengerId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      final response = await ApiService.acceptRide(rideId, token);
+      final response = await ApiService.acceptRide(rideId, token, passengerId);
 
       if (response['message'] != null && response['message'].contains('accepted')) {
         // Ride was accepted successfully
+        // Update the ride in the available rides list
+        final rideIndex = _availableRides.indexWhere((ride) => ride.id == rideId);
+        if (rideIndex != -1) {
+          _availableRides[rideIndex] = _availableRides[rideIndex].copyWith(
+            status: RideStatus.accepted,
+            passengerId: passengerId,
+          );
+        }
         _isLoading = false;
         notifyListeners();
         return true;

@@ -4,6 +4,10 @@ import '../providers/ride_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/ride.dart';
 import '../utils/theme.dart';
+import 'active_ride_screen.dart';
+import 'ride_details_screen.dart';
+import 'ride_completion_screen.dart';
+import 'payment_received_screen.dart';
 
 class MyRidesScreen extends StatefulWidget {
   const MyRidesScreen({super.key});
@@ -121,6 +125,36 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
           );
         }
       }
+    }
+  }
+
+  void _navigateToRideScreen(Ride ride) {
+    // Navigate to appropriate screen based on ride status and type
+    if (ride.status == RideStatus.completed) {
+      if (ride.type == RideType.passenger) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => RideCompletionScreen(ride: ride),
+          ),
+        );
+      } else {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => PaymentReceivedScreen(ride: ride),
+          ),
+        );
+      }
+    } else if (ride.status == RideStatus.pending || 
+               ride.status == RideStatus.accepted || 
+               ride.status == RideStatus.inProgress) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ActiveRideScreen(ride: ride),
+        ),
+      );
+    } else {
+      // For cancelled rides, show details
+      _showRideDetails(ride);
     }
   }
 
@@ -466,7 +500,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                           onPressed: () => _showRideDetails(ride),
                           icon: const Icon(Icons.info_outline),
                         ),
-                        onTap: () => _showRideDetails(ride),
+                        onTap: () => _navigateToRideScreen(ride),
                       ),
                     );
                   },

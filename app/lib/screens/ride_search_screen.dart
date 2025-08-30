@@ -8,6 +8,7 @@ import '../models/ride.dart';
 import '../utils/theme.dart';
 import '../widgets/location_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'active_ride_screen.dart';
 
 class RideSearchScreen extends StatefulWidget {
   const RideSearchScreen({super.key});
@@ -598,11 +599,30 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                           '${ride.pickupTime.toString().substring(0, 16)} • ${ride.type.name}',
                         ),
                         trailing: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             // Accept ride logic
                             final authProvider = context.read<AuthProvider>();
-                            if (authProvider.token != null) {
-                              rideProvider.acceptRide(ride.id, authProvider.token!);
+                            if (authProvider.token != null && authProvider.currentUser != null) {
+                              final success = await rideProvider.acceptRide(
+                                ride.id, 
+                                authProvider.token!, 
+                                authProvider.currentUser!.id
+                              );
+                              if (success && mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Ride accepted successfully!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                
+                                // Navigate to active ride screen
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (context) => ActiveRideScreen(ride: ride),
+                                  ),
+                                );
+                              }
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(

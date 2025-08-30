@@ -16,7 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _rememberMe = false;
+  bool _rememberMe = true; // Default to true for session persistence
 
   @override
   void dispose() {
@@ -212,7 +212,19 @@ class _LoginScreenState extends State<LoginScreen> {
                             });
                           },
                         ),
-                        const Text('Remember me'),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Stay logged in'),
+                            Text(
+                              'Keep me signed in',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                     TextButton(

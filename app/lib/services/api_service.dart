@@ -106,6 +106,23 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> validateToken(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/auth/validate'),
+        headers: _getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        return {'valid': true};
+      } else {
+        return {'valid': false};
+      }
+    } catch (e) {
+      return {'valid': false, 'error': e.toString()};
+    }
+  }
+
   // Ride endpoints
   static Future<Map<String, dynamic>> createRide(
     Map<String, dynamic> rideData,
@@ -183,11 +200,15 @@ class ApiService {
   static Future<Map<String, dynamic>> acceptRide(
     String rideId,
     String token,
+    String passengerId,
   ) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/rides/$rideId/accept'),
         headers: _getAuthHeaders(token),
+        body: jsonEncode({
+          'passenger_id': passengerId,
+        }),
       );
 
       if (response.statusCode == 200) {

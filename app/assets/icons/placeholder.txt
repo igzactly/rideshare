@@ -1,0 +1,3 @@
+This directory contains app icons.
+For production, add your app icons and other icon assets here.
+

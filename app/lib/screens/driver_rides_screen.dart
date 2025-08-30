@@ -18,7 +18,10 @@ class _DriverRidesScreenState extends State<DriverRidesScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDriverRides();
+    // Load rides after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDriverRides();
+    });
   }
 
   Future<void> _loadDriverRides() async {
@@ -133,9 +136,9 @@ class _DriverRidesScreenState extends State<DriverRidesScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Consumer<RideProvider>(
               builder: (context, rideProvider, child) {
-                final driverRides = rideProvider.userRides
-                    .where((ride) => ride.type == RideType.driver)
-                    .toList();
+                                 final driverRides = rideProvider.userRides
+                     .where((ride) => ride.type == RideType.driver)
+                     .toList();
 
                 if (driverRides.isEmpty) {
                   return Center(
@@ -294,11 +297,11 @@ class _DriverRidesScreenState extends State<DriverRidesScreen> {
                                     ),
                                   ),
                                   Expanded(
-                                    child: _buildDetailItem(
-                                      Icons.attach_money,
-                                      'Price per Seat',
-                                      '£${ride.pricePerSeat?.toStringAsFixed(2) ?? 'N/A'}',
-                                    ),
+                                                                                    child: _buildDetailItem(
+                                                  Icons.attach_money,
+                                                  'Price per Seat',
+                                                  '£${ride.price.toStringAsFixed(2)}',
+                                                ),
                                   ),
                                 ],
                               ),
@@ -387,8 +390,8 @@ class _DriverRidesScreenState extends State<DriverRidesScreen> {
         return Colors.orange;
       case RideStatus.accepted:
         return Colors.blue;
-      case RideStatus.in_progress:
-        return Colors.purple;
+                        case RideStatus.inProgress:
+                    return Colors.purple;
       case RideStatus.completed:
         return Colors.green;
       case RideStatus.cancelled:
@@ -404,8 +407,8 @@ class _DriverRidesScreenState extends State<DriverRidesScreen> {
         return 'Pending';
       case RideStatus.accepted:
         return 'Accepted';
-      case RideStatus.in_progress:
-        return 'In Progress';
+                        case RideStatus.inProgress:
+                    return 'In Progress';
       case RideStatus.completed:
         return 'Completed';
       case RideStatus.cancelled:
