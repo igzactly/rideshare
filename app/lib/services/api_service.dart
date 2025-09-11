@@ -379,6 +379,110 @@ class ApiService {
     }
   }
 
+  // Live location tracking
+  static Future<Map<String, dynamic>> startLiveTracking(
+    String rideId,
+    String token,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/location/live-tracking/start'),
+        headers: _getAuthHeaders(token),
+        body: jsonEncode({'ride_id': rideId}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to start live tracking: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> stopLiveTracking(
+    String rideId,
+    String token,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/location/live-tracking/stop'),
+        headers: _getAuthHeaders(token),
+        body: jsonEncode({'ride_id': rideId}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to stop live tracking: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> getLiveTrackingStatus(
+    String rideId,
+    String token,
+  ) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/location/live-tracking/$rideId/status'),
+        headers: _getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to get tracking status: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getNearbyDrivers(
+    double latitude,
+    double longitude,
+    double radiusKm,
+    String token,
+  ) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/location/nearby-drivers?latitude=$latitude&longitude=$longitude&radius_km=$radiusKm'),
+        headers: _getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
+  }
+
   // Health check
   static Future<bool> healthCheck() async {
     try {

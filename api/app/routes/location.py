@@ -29,7 +29,7 @@ async def update_location(
     location: LocationUpdate, 
     user: User = Depends(fastapi_users.current_user)
 ):
-    """Update user's current location"""
+    """Update user's current location with enhanced live tracking"""
     location.user_id = user.id
     location.timestamp = datetime.utcnow()
     
@@ -47,7 +47,34 @@ async def update_location(
     if location.ride_id and str(location.ride_id) in active_connections:
         await broadcast_location_update(location)
     
+    # Store location for analytics and safety
+    await store_location_for_analytics(location)
+    
     return location
+
+async def store_location_for_analytics(location: LocationUpdate):
+    """Store location data for analytics and safety monitoring"""
+    try:
+        # Store location history for route analysis
+        await locations_collection.insert_one({
+            "user_id": location.user_id,
+            "ride_id": location.ride_id,
+            "coordinates": location.coordinates,
+            "timestamp": location.timestamp,
+            "accuracy": location.accuracy,
+            "speed": location.speed,
+            "heading": location.heading,
+            "purpose": "analytics"
+        })
+        
+        # Update user's last known location for safety
+        if location.ride_id:
+            await rides_collection.update_one(
+                {"_id": location.ride_id},
+                {"$set": {"last_known_location": location.coordinates, "last_location_update": location.timestamp}}
+            )
+    except Exception as e:
+        print(f"Failed to store location for analytics: {e}")
 
 @router.get("/user/{user_id}/recent", response_model=List[LocationUpdate])
 async def get_user_recent_locations(
@@ -224,4 +251,99 @@ async def get_nearby_drivers(
                 "available_seats": driver.get("available_seats", 1)
             })
     
-    return drivers_with_locations 
+    return drivers_with_locations
+
+@router.post("/live-tracking/start", response_model=dict)
+async def start_live_tracking(
+    ride_id: str,
+    user: User = Depends(fastapi_users.current_user)
+):
+    """Start live location tracking for a ride"""
+    if not ObjectId.is_valid(ride_id):
+        raise HTTPException(status_code=400, detail="Invalid ride ID")
+    
+    # Verify user is part of this ride
+    ride = await rides_collection.find_one({
+        "_id": ObjectId(ride_id),
+        "$or": [
+            {"driver_id": user.id},
+            {"passenger_id": user.id}
+        ]
+    })
+    
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found or user not authorized")
+    
+    # Update ride status to indicate live tracking is active
+    await rides_collection.update_one(
+        {"_id": ObjectId(ride_id)},
+        {"$set": {"live_tracking_active": True, "tracking_started_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Live tracking started successfully", "ride_id": ride_id}
+
+@router.post("/live-tracking/stop", response_model=dict)
+async def stop_live_tracking(
+    ride_id: str,
+    user: User = Depends(fastapi_users.current_user)
+):
+    """Stop live location tracking for a ride"""
+    if not ObjectId.is_valid(ride_id):
+        raise HTTPException(status_code=400, detail="Invalid ride ID")
+    
+    # Verify user is part of this ride
+    ride = await rides_collection.find_one({
+        "_id": ObjectId(ride_id),
+        "$or": [
+            {"driver_id": user.id},
+            {"passenger_id": user.id}
+        ]
+    })
+    
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found or user not authorized")
+    
+    # Update ride status to indicate live tracking is stopped
+    await rides_collection.update_one(
+        {"_id": ObjectId(ride_id)},
+        {"$set": {"live_tracking_active": False, "tracking_stopped_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Live tracking stopped successfully", "ride_id": ride_id}
+
+@router.get("/live-tracking/{ride_id}/status", response_model=dict)
+async def get_live_tracking_status(
+    ride_id: str,
+    user: User = Depends(fastapi_users.current_user)
+):
+    """Get live tracking status for a ride"""
+    if not ObjectId.is_valid(ride_id):
+        raise HTTPException(status_code=400, detail="Invalid ride ID")
+    
+    # Verify user is part of this ride
+    ride = await rides_collection.find_one({
+        "_id": ObjectId(ride_id),
+        "$or": [
+            {"driver_id": user.id},
+            {"passenger_id": user.id}
+        ]
+    })
+    
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found or user not authorized")
+    
+    # Get the most recent location updates for this ride
+    recent_locations = await locations_collection.find(
+        {"ride_id": ObjectId(ride_id)},
+        sort=[("timestamp", -1)]
+    ).limit(5).to_list(5)
+    
+    return {
+        "ride_id": ride_id,
+        "live_tracking_active": ride.get("live_tracking_active", False),
+        "tracking_started_at": ride.get("tracking_started_at"),
+        "tracking_stopped_at": ride.get("tracking_stopped_at"),
+        "last_location_update": ride.get("last_location_update"),
+        "recent_locations": recent_locations,
+        "websocket_connections": len(active_connections.get(ride_id, []))
+    } 

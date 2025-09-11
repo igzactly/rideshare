@@ -66,6 +66,31 @@ app.include_router(
     tags=["users"],
 )
 
+# Additional auth endpoints for Flutter compatibility
+@app.post("/auth/login")
+async def login_for_flutter(request: dict):
+    """Login endpoint compatible with Flutter app"""
+    # This will be handled by the existing JWT auth router
+    # The actual implementation will be in the auth router
+    pass
+
+@app.post("/auth/register")
+async def register_for_flutter(request: dict):
+    """Register endpoint compatible with Flutter app"""
+    # This will be handled by the existing register router
+    pass
+
+@app.get("/auth/validate")
+async def validate_token_for_flutter(user: User = Depends(fastapi_users.current_user)):
+    """Token validation endpoint for Flutter app"""
+    return {
+        "valid": True,
+        "user_id": str(user.id),
+        "email": user.email,
+        "is_driver": user.is_driver,
+        "is_verified_driver": user.is_verified_driver
+    }
+
 @app.websocket("/ws/{ride_id}")
 async def websocket_endpoint(websocket: WebSocket, ride_id: str):
     await websocket.accept()

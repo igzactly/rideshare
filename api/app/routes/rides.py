@@ -204,3 +204,102 @@ async def get_active_rides(user: User = Depends(fastapi_users.current_user)):
         ]
     }).to_list(100)
     return active_rides
+
+@router.get("/user", response_model=dict)
+async def get_user_rides(user_id: str, user: User = Depends(fastapi_users.current_user)):
+    """Get rides for a specific user - Flutter compatibility endpoint"""
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    rides = await rides_collection.find({
+        "$or": [
+            {"driver_id": ObjectId(user_id)},
+            {"passenger_id": ObjectId(user_id)}
+        ]
+    }).to_list(100)
+    
+    return {"rides": rides}
+
+@router.get("/user/{user_id}", response_model=dict)
+async def get_user_rides_by_id(user_id: str, user: User = Depends(fastapi_users.current_user)):
+    """Get rides for a specific user by ID in URL - Flutter compatibility endpoint"""
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    rides = await rides_collection.find({
+        "$or": [
+            {"driver_id": ObjectId(user_id)},
+            {"passenger_id": ObjectId(user_id)}
+        ]
+    }).to_list(100)
+    
+    return {"rides": rides}
+
+@router.post("/{ride_id}/accept", response_model=dict)
+async def accept_ride_passenger_endpoint(ride_id: str, passenger_id: str, user: User = Depends(fastapi_users.current_user)):
+    """Accept a ride as a passenger - Flutter compatibility endpoint"""
+    if not ObjectId.is_valid(ride_id):
+        raise HTTPException(status_code=400, detail="Invalid ride ID")
+    
+    ride = await rides_collection.find_one({"_id": ObjectId(ride_id), "status": "active", "passenger_id": None})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found or already accepted by a passenger")
+    
+    result = await rides_collection.update_one(
+        {"_id": ObjectId(ride_id)},
+        {"$set": {"passenger_id": ObjectId(passenger_id), "status": "pending_driver_acceptance"}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Failed to accept ride as passenger")
+    
+    return {"message": "Ride accepted by passenger successfully"}
+
+@router.put("/{ride_id}/status", response_model=dict)
+async def update_ride_status_endpoint(ride_id: str, status: str, user: User = Depends(fastapi_users.current_user)):
+    """Update ride status - Flutter compatibility endpoint"""
+    if not ObjectId.is_valid(ride_id):
+        raise HTTPException(status_code=400, detail="Invalid ride ID")
+    
+    valid_statuses = ["picked_up", "dropped_off", "completed", "cancelled", "in_progress", "accepted", "pending"]
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+    
+    ride = await rides_collection.find_one({"_id": ObjectId(ride_id)})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    # Check if user is authorized to update this ride
+    if ride.get("driver_id") != user.id and ride.get("passenger_id") != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this ride")
+    
+    result = await rides_collection.update_one(
+        {"_id": ObjectId(ride_id)},
+        {"$set": {"status": status, "updated_at": datetime.utcnow()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Failed to update ride status")
+    
+    return {"message": "Ride status updated successfully"}
+
+@router.delete("/{ride_id}", response_model=dict)
+async def delete_ride(ride_id: str, user: User = Depends(fastapi_users.current_user)):
+    """Delete a ride - Flutter compatibility endpoint"""
+    if not ObjectId.is_valid(ride_id):
+        raise HTTPException(status_code=400, detail="Invalid ride ID")
+    
+    ride = await rides_collection.find_one({"_id": ObjectId(ride_id)})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    # Check if user is authorized to delete this ride
+    if ride.get("driver_id") != user.id and ride.get("passenger_id") != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this ride")
+    
+    result = await rides_collection.delete_one({"_id": ObjectId(ride_id)})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=400, detail="Failed to delete ride")
+    
+    return {"message": "Ride deleted successfully"}

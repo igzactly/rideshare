@@ -95,7 +95,7 @@ class LocationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateLocationToServer(String token) async {
+  Future<void> updateLocationToServer(String token, {String? rideId}) async {
     if (_currentLocation == null) return;
 
     try {
@@ -104,9 +104,12 @@ class LocationProvider extends ChangeNotifier {
       notifyListeners();
 
       final locationData = {
-        'latitude': _currentLocation!.latitude,
-        'longitude': _currentLocation!.longitude,
+        'coordinates': [_currentLocation!.latitude, _currentLocation!.longitude],
         'timestamp': DateTime.now().toIso8601String(),
+        'accuracy': 10.0, // Default accuracy
+        'speed': 0.0, // Default speed
+        'heading': 0.0, // Default heading
+        if (rideId != null) 'ride_id': rideId,
       };
 
       final response = await ApiService.updateLocation(locationData, token);
@@ -119,6 +122,101 @@ class LocationProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> startLiveTracking(String rideId, String token) async {
+    if (!_locationPermissionGranted) {
+      await _checkLocationPermission();
+      if (!_locationPermissionGranted) {
+        _error = 'Location permission not granted';
+        notifyListeners();
+        return;
+      }
+    }
+
+    try {
+      // Start live tracking on server
+      final response = await ApiService.startLiveTracking(rideId, token);
+      if (response['success'] != true) {
+        _error = response['message'] ?? 'Failed to start live tracking';
+        notifyListeners();
+        return;
+      }
+
+      // Get initial location
+      await getCurrentLocation();
+
+      // Start periodic location updates with ride context
+      Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 5, // Update every 5 meters for live tracking
+        ),
+      ).listen(
+        (Position position) {
+          _currentLocation = LatLng(position.latitude, position.longitude);
+          notifyListeners();
+
+          // Update server with new location including ride context
+          updateLocationToServer(token, rideId: rideId);
+        },
+        onError: (e) {
+          _error = 'Live tracking error: $e';
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      _error = 'Failed to start live tracking: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> stopLiveTracking(String rideId, String token) async {
+    try {
+      final response = await ApiService.stopLiveTracking(rideId, token);
+      if (response['success'] != true) {
+        _error = response['message'] ?? 'Failed to stop live tracking';
+        notifyListeners();
+        return;
+      }
+    } catch (e) {
+      _error = 'Failed to stop live tracking: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>?> getLiveTrackingStatus(String rideId, String token) async {
+    try {
+      final response = await ApiService.getLiveTrackingStatus(rideId, token);
+      if (response['success'] == true) {
+        return response;
+      } else {
+        _error = response['message'] ?? 'Failed to get tracking status';
+        notifyListeners();
+        return null;
+      }
+    } catch (e) {
+      _error = 'Failed to get tracking status: $e';
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getNearbyDrivers(String token) async {
+    if (_currentLocation == null) return [];
+
+    try {
+      return await ApiService.getNearbyDrivers(
+        _currentLocation!.latitude,
+        _currentLocation!.longitude,
+        5.0, // 5km radius
+        token,
+      );
+    } catch (e) {
+      _error = 'Failed to get nearby drivers: $e';
+      notifyListeners();
+      return [];
     }
   }
 
