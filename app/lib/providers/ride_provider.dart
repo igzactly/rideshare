@@ -25,11 +25,15 @@ class RideProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
+      print('Loading user rides...');
       final rides = await ApiService.getUserRides(token);
+      print('Loaded ${rides.length} rides');
+      
       _userRides = rides;
       _isLoading = false;
       notifyListeners();
     } catch (e) {
+      print('Error loading user rides: $e');
       _error = 'Failed to load rides: $e';
       _isLoading = false;
       notifyListeners();

@@ -178,21 +178,44 @@ class ApiService {
 
   static Future<List<Ride>> getUserRides(String token) async {
     try {
+      // First, validate the token to get the user ID
+      final validateResponse = await http.get(
+        Uri.parse('$_baseUrl/auth/validate'),
+        headers: _getAuthHeaders(token),
+      );
+
+      if (validateResponse.statusCode != 200) {
+        print('Failed to validate token: ${validateResponse.statusCode}');
+        return [];
+      }
+
+      final validateData = jsonDecode(validateResponse.body);
+      final userId = validateData['user_id'];
+
+      if (userId == null) {
+        print('User ID not found in validation response');
+        return [];
+      }
+
+      // Now get the user's rides
       final response = await http.get(
-        Uri.parse('$_baseUrl/rides/user'),
+        Uri.parse('$_baseUrl/rides/user?user_id=$userId'),
         headers: _getAuthHeaders(token),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        // The response is wrapped in a 'rides' object
         final rides = (data['rides'] as List)
             .map((rideJson) => Ride.fromJson(rideJson))
             .toList();
         return rides;
       } else {
+        print('Failed to get user rides: ${response.statusCode} - ${response.body}');
         return [];
       }
     } catch (e) {
+      print('Error getting user rides: $e');
       return [];
     }
   }

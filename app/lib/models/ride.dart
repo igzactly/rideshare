@@ -53,43 +53,127 @@ class Ride {
   });
 
   factory Ride.fromJson(Map<String, dynamic> json) {
-    return Ride(
-      id: json['id'] ?? '',
-      passengerId: json['passenger_id'] ?? '',
-      driverId: json['driver_id'],
-      pickupLocation: LatLng(
-        json['pickup_location']['coordinates'][1] ?? 0.0,
-        json['pickup_location']['coordinates'][0] ?? 0.0,
-      ),
-      dropoffLocation: LatLng(
-        json['dropoff_location']['coordinates'][1] ?? 0.0,
-        json['dropoff_location']['coordinates'][0] ?? 0.0,
-      ),
-      pickupAddress: json['pickup_address'] ?? '',
-      dropoffAddress: json['dropoff_address'] ?? '',
-      pickupTime: DateTime.parse(
-          json['pickup_time'] ?? DateTime.now().toIso8601String()),
-      actualPickupTime: json['actual_pickup_time'] != null
-          ? DateTime.parse(json['actual_pickup_time'])
-          : null,
-      completionTime: json['completion_time'] != null
-          ? DateTime.parse(json['completion_time'])
-          : null,
-      distance: (json['distance'] ?? 0.0).toDouble(),
-      price: (json['price'] ?? 0.0).toDouble(),
-      status: RideStatus.values.firstWhere(
+    // Handle both frontend and backend data structures
+    final id = json['id'] ?? json['_id'] ?? '';
+    final passengerId = json['passenger_id'] ?? '';
+    final driverId = json['driver_id'];
+    
+    // Handle location data - backend uses GeoJSON Point format
+    LatLng pickupLocation;
+    LatLng dropoffLocation;
+    
+    if (json['pickup_location'] != null && json['pickup_location']['coordinates'] != null) {
+      // Backend GeoJSON format: [longitude, latitude]
+      final coords = json['pickup_location']['coordinates'] as List;
+      pickupLocation = LatLng(coords[1] ?? 0.0, coords[0] ?? 0.0);
+    } else if (json['pickupLocation'] != null) {
+      // Frontend format
+      pickupLocation = LatLng(
+        json['pickupLocation']['latitude'] ?? 0.0,
+        json['pickupLocation']['longitude'] ?? 0.0,
+      );
+    } else {
+      pickupLocation = const LatLng(0.0, 0.0);
+    }
+    
+    if (json['dropoff_location'] != null && json['dropoff_location']['coordinates'] != null) {
+      // Backend GeoJSON format: [longitude, latitude]
+      final coords = json['dropoff_location']['coordinates'] as List;
+      dropoffLocation = LatLng(coords[1] ?? 0.0, coords[0] ?? 0.0);
+    } else if (json['dropoffLocation'] != null) {
+      // Frontend format
+      dropoffLocation = LatLng(
+        json['dropoffLocation']['latitude'] ?? 0.0,
+        json['dropoffLocation']['longitude'] ?? 0.0,
+      );
+    } else {
+      dropoffLocation = const LatLng(0.0, 0.0);
+    }
+    
+    // Handle address data - backend might use different field names
+    final pickupAddress = json['pickup_address'] ?? json['pickup'] ?? '';
+    final dropoffAddress = json['dropoff_address'] ?? json['dropoff'] ?? '';
+    
+    // Handle time data
+    final pickupTime = json['pickup_time'] != null 
+        ? DateTime.parse(json['pickup_time'])
+        : DateTime.now();
+    final actualPickupTime = json['actual_pickup_time'] != null
+        ? DateTime.parse(json['actual_pickup_time'])
+        : null;
+    final completionTime = json['completion_time'] != null
+        ? DateTime.parse(json['completion_time'])
+        : null;
+    
+    // Handle numeric data
+    final distance = (json['distance'] ?? json['total_distance_km'] ?? 0.0).toDouble();
+    final price = (json['price'] ?? 0.0).toDouble();
+    
+    // Handle status - backend uses different status values
+    RideStatus status;
+    try {
+      status = RideStatus.values.firstWhere(
         (e) => e.toString().split('.').last == json['status'],
         orElse: () => RideStatus.pending,
-      ),
-      type: RideType.values.firstWhere(
-        (e) => e.toString().split('.').last == json['type'],
-        orElse: () => RideType.passenger,
-      ),
-      metadata: json['metadata'],
-      createdAt: DateTime.parse(
-          json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(
-          json['updated_at'] ?? DateTime.now().toIso8601String()),
+      );
+    } catch (e) {
+      // Map backend status values to frontend enum
+      switch (json['status']) {
+        case 'active':
+          status = RideStatus.pending;
+          break;
+        case 'accepted':
+        case 'confirmed':
+          status = RideStatus.accepted;
+          break;
+        case 'in_progress':
+        case 'picked_up':
+          status = RideStatus.inProgress;
+          break;
+        case 'completed':
+        case 'dropped_off':
+          status = RideStatus.completed;
+          break;
+        case 'cancelled':
+          status = RideStatus.cancelled;
+          break;
+        default:
+          status = RideStatus.pending;
+      }
+    }
+    
+    // Handle type - determine based on user role
+    final type = driverId != null ? RideType.driver : RideType.passenger;
+    
+    // Handle metadata
+    final metadata = json['metadata'] ?? {};
+    
+    // Handle timestamps
+    final createdAt = json['created_at'] != null 
+        ? DateTime.parse(json['created_at'])
+        : DateTime.now();
+    final updatedAt = json['updated_at'] != null
+        ? DateTime.parse(json['updated_at'])
+        : DateTime.now();
+    
+    return Ride(
+      id: id,
+      passengerId: passengerId,
+      driverId: driverId,
+      pickupLocation: pickupLocation,
+      dropoffLocation: dropoffLocation,
+      pickupAddress: pickupAddress,
+      dropoffAddress: dropoffAddress,
+      pickupTime: pickupTime,
+      actualPickupTime: actualPickupTime,
+      completionTime: completionTime,
+      distance: distance,
+      price: price,
+      status: status,
+      type: type,
+      metadata: metadata,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 
