@@ -221,7 +221,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                     _buildDetailRow(
                         'Distance', '${ride.distance.toStringAsFixed(1)} km'),
                     _buildDetailRow(
-                        'Price', '\$${ride.price.toStringAsFixed(2)}'),
+                        'Price', '£${ride.price.toStringAsFixed(2)}'),
                     _buildDetailRow(
                         'Created', ride.createdAt.toString().substring(0, 16)),
                     const SizedBox(height: 20),
@@ -615,7 +615,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '\$${ride.price.toStringAsFixed(2)} • ${ride.distance.toStringAsFixed(1)} km',
+                  '£${ride.price.toStringAsFixed(2)} • ${ride.distance.toStringAsFixed(1)} km',
                   style: const TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 12,

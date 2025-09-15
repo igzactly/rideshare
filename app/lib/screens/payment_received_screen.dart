@@ -101,7 +101,7 @@ class _PaymentReceivedScreenState extends State<PaymentReceivedScreen> {
       ),
       child: Column(
         children: [
-          _buildDetailRow('Amount', '\$${widget.ride.price.toStringAsFixed(2)}'),
+          _buildDetailRow('Amount', '£${widget.ride.price.toStringAsFixed(2)}'),
           const SizedBox(height: 8),
           _buildDetailRow('From', 'Passenger'),
           const SizedBox(height: 8),

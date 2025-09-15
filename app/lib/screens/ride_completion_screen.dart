@@ -167,7 +167,7 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
           const SizedBox(height: 8),
           _buildSummaryRow('Duration', '12 min'), // TODO: Calculate from API
           const SizedBox(height: 8),
-          _buildSummaryRow('Total', '\$${widget.ride.price.toStringAsFixed(2)}'),
+          _buildSummaryRow('Total', '£${widget.ride.price.toStringAsFixed(2)}'),
         ],
       ),
     );
@@ -225,7 +225,7 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Amount: \$${widget.ride.price.toStringAsFixed(2)}',
+                      'Amount: £${widget.ride.price.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,

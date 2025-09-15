@@ -270,7 +270,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
             const SizedBox(height: 8),
             _buildInfoRow('Time', widget.ride.pickupTime.toString().substring(0, 16)),
             const SizedBox(height: 8),
-            _buildInfoRow('Price', '\$${widget.ride.price.toStringAsFixed(2)}'),
+            _buildInfoRow('Price', '£${widget.ride.price.toStringAsFixed(2)}'),
             const SizedBox(height: 8),
             _buildInfoRow('Type', widget.ride.type.name.toUpperCase()),
           ],

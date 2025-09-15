@@ -115,7 +115,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
             _buildInfoRow('Ride ID', '#${widget.ride.id.substring(0, 8)}'),
             _buildInfoRow('Type', widget.ride.type.name.toUpperCase()),
             _buildInfoRow('Status', _getStatusText(widget.ride.status)),
-            _buildInfoRow('Price', '\$${widget.ride.price.toStringAsFixed(2)}'),
+            _buildInfoRow('Price', '£${widget.ride.price.toStringAsFixed(2)}'),
             _buildInfoRow('Created', _formatDateTime(widget.ride.createdAt)),
             _buildInfoRow('Updated', _formatDateTime(widget.ride.updatedAt)),
           ],

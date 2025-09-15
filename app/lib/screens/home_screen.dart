@@ -552,7 +552,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '\$${prices[index]}',
+                  '£${prices[index]}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
