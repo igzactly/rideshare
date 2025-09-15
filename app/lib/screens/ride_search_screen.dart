@@ -98,34 +98,32 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
         return;
       }
 
-      // Check if current location is available
-      if (locationProvider.currentLocation == null) {
+      // Use a default location if current location is not available
+      LatLng searchLocation;
+      if (locationProvider.currentLocation != null) {
+        searchLocation = locationProvider.currentLocation!;
+        // Set pickup location if using current location
+        if (_pickupController.text == 'Current Location') {
+          locationProvider.setPickupLocation(searchLocation, 'Current Location');
+        }
+      } else if (locationProvider.pickupLocation != null) {
+        searchLocation = locationProvider.pickupLocation!;
+      } else {
+        // Use London as default location for testing
+        searchLocation = const LatLng(51.5074, -0.1278);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please enable location services to search rides'),
+            content: Text('Using default location (London) for search'),
             backgroundColor: Colors.orange,
           ),
         );
-        return;
       }
-
-      // Set pickup location if using current location
-      if (_pickupController.text == 'Current Location') {
-        locationProvider.setPickupLocation(
-            locationProvider.currentLocation!, 'Current Location');
-      }
-
-      // Dropoff location is optional now - we only search by pickup location
 
       // Simple search: only use pickup location
       final searchParams = {
         'pickup_location': {
-          'latitude': (locationProvider.pickupLocation ??
-                  locationProvider.currentLocation!)
-              .latitude,
-          'longitude': (locationProvider.pickupLocation ??
-                  locationProvider.currentLocation!)
-              .longitude,
+          'latitude': searchLocation.latitude,
+          'longitude': searchLocation.longitude,
         },
         'radius_km': 15.0, // Increased search radius
       };

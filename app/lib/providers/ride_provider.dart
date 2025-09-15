@@ -55,8 +55,15 @@ class RideProvider extends ChangeNotifier {
       notifyListeners();
 
       print('Searching rides with params: $searchParams');
+      print('Using token: ${token.substring(0, 20)}...');
+      
       final rides = await ApiService.searchRides(searchParams, token);
       print('Search returned ${rides.length} rides');
+      
+      // Log each ride for debugging
+      for (final ride in rides) {
+        print('Found ride: ${ride.id} - ${ride.pickupAddress} -> ${ride.dropoffAddress} - Status: ${ride.status}');
+      }
       
       _availableRides = rides;
       _isLoading = false;

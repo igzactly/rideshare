@@ -158,22 +158,34 @@ class ApiService {
     String token,
   ) async {
     try {
+      print('API Service: Searching rides with params: $searchParams');
+      print('API Service: Using base URL: $_baseUrl');
+      
       final response = await http.post(
         Uri.parse('$_baseUrl/rides/find'),
         headers: _getAuthHeaders(token),
         body: jsonEncode(searchParams),
       );
 
+      print('API Service: Response status: ${response.statusCode}');
+      print('API Service: Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('API Service: Decoded data: $data');
+        
         final rides = (data['rides'] as List)
             .map((rideJson) => Ride.fromJson(rideJson))
             .toList();
+        
+        print('API Service: Parsed ${rides.length} rides');
         return rides;
       } else {
+        print('API Service: Error response: ${response.statusCode} - ${response.body}');
         return [];
       }
     } catch (e) {
+      print('API Service: Exception during search: $e');
       return [];
     }
   }
