@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/session_manager.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
 
@@ -80,9 +81,9 @@ class _SplashScreenState extends State<SplashScreen>
   void _checkAuthAndNavigate() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    if (authProvider.isAuthenticated) {
+    if (authProvider.isAuthenticated && !authProvider.isSessionExpired()) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const SessionAwareWidget(child: HomeScreen())),
       );
     } else {
       Navigator.of(context).pushReplacement(

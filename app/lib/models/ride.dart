@@ -143,7 +143,9 @@ class Ride {
     }
     
     // Handle type - determine based on user role
-    final type = driverId != null ? RideType.driver : RideType.passenger;
+    // If the current user is the driver, it's a driver ride, otherwise passenger ride
+    // This will be determined by the calling context, for now default to passenger
+    final type = RideType.passenger; // Will be updated by the calling context
     
     // Handle metadata
     final metadata = json['metadata'] ?? {};

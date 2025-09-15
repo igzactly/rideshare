@@ -29,6 +29,11 @@ class RideProvider extends ChangeNotifier {
       final rides = await ApiService.getUserRides(token);
       print('Loaded ${rides.length} rides');
       
+      // Log ride details for debugging
+      for (final ride in rides) {
+        print('Ride: ${ride.id} - Status: ${ride.status} - Type: ${ride.type} - Pickup: ${ride.pickupAddress}');
+      }
+      
       _userRides = rides;
       _isLoading = false;
       notifyListeners();
@@ -230,5 +235,9 @@ class RideProvider extends ChangeNotifier {
 
   List<Ride> getRidesByType(RideType type) {
     return _userRides.where((ride) => ride.type == type).toList();
+  }
+
+  Future<void> refreshUserRides(String token) async {
+    await loadUserRides(token);
   }
 }

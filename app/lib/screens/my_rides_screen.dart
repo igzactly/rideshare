@@ -28,6 +28,15 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh rides when screen becomes visible
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadRides();
+    });
+  }
+
   Future<void> _loadRides() async {
     final authProvider = context.read<AuthProvider>();
     final rideProvider = context.read<RideProvider>();
@@ -37,18 +46,18 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
     }
   }
 
-  String _getStatusColor(RideStatus status) {
+  Color _getStatusColor(RideStatus status) {
     switch (status) {
       case RideStatus.pending:
-        return '#FF9800'; // Orange
+        return AppTheme.warningColor;
       case RideStatus.accepted:
-        return '#2196F3'; // Blue
+        return AppTheme.primaryBlue;
       case RideStatus.inProgress:
-        return '#4CAF50'; // Green
+        return AppTheme.successColor;
       case RideStatus.completed:
-        return '#4CAF50'; // Green
+        return AppTheme.successColor;
       case RideStatus.cancelled:
-        return '#F44336'; // Red
+        return AppTheme.errorColor;
     }
   }
 
@@ -162,6 +171,10 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: AppTheme.darkCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.7,
         minChildSize: 0.5,
@@ -174,17 +187,21 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  const Text(
                     'Ride Details',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, color: AppTheme.textPrimary),
                   ),
                 ],
               ),
-              const Divider(),
+              const Divider(color: AppTheme.darkDivider),
               Expanded(
                 child: ListView(
                   controller: scrollController,
@@ -250,7 +267,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
+                          backgroundColor: AppTheme.primaryPurple,
                           foregroundColor: Colors.white,
                         ),
                         child: const Text('Start Ride'),
@@ -290,14 +307,14 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
               label,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.grey,
+                color: AppTheme.textSecondary,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16, color: AppTheme.textPrimary),
             ),
           ),
         ],
@@ -308,10 +325,12 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
         title: const Text('My Rides'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.darkSurface,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
         actions: [
           IconButton(
             onPressed: _loadRides,
@@ -324,51 +343,77 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
           // Filters
           Container(
             padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: AppTheme.darkSurface,
+              border: Border(
+                bottom: BorderSide(color: AppTheme.darkDivider, width: 1),
+              ),
+            ),
             child: Row(
               children: [
                 Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedStatus,
-                    decoration: const InputDecoration(
-                      labelText: 'Status',
-                      border: OutlineInputBorder(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.darkCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.darkDivider),
                     ),
-                    items: [
-                      const DropdownMenuItem(
-                          value: 'all', child: Text('All Statuses')),
-                      ...RideStatus.values.map((status) => DropdownMenuItem(
-                            value: status.name,
-                            child: Text(_getStatusText(status)),
-                          )),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedStatus = value!;
-                      });
-                    },
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedStatus,
+                      decoration: const InputDecoration(
+                        labelText: 'Status',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      dropdownColor: AppTheme.darkCard,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      items: [
+                        const DropdownMenuItem(
+                            value: 'all', child: Text('All Statuses')),
+                        ...RideStatus.values.map((status) => DropdownMenuItem(
+                              value: status.name,
+                              child: Text(_getStatusText(status)),
+                            )),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedStatus = value!;
+                        });
+                      },
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedType,
-                    decoration: const InputDecoration(
-                      labelText: 'Type',
-                      border: OutlineInputBorder(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.darkCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.darkDivider),
                     ),
-                    items: [
-                      const DropdownMenuItem(
-                          value: 'all', child: Text('All Types')),
-                      ...RideType.values.map((type) => DropdownMenuItem(
-                            value: type.name,
-                            child: Text(_getTypeText(type)),
-                          )),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedType = value!;
-                      });
-                    },
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedType,
+                      decoration: const InputDecoration(
+                        labelText: 'Type',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      dropdownColor: AppTheme.darkCard,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      items: [
+                        const DropdownMenuItem(
+                            value: 'all', child: Text('All Types')),
+                        ...RideType.values.map((type) => DropdownMenuItem(
+                              value: type.name,
+                              child: Text(_getTypeText(type)),
+                            )),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedType = value!;
+                        });
+                      },
+                    ),
                   ),
                 ),
               ],
@@ -381,7 +426,9 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
               builder: (context, rideProvider, child) {
                 if (rideProvider.isLoading) {
                   return const Center(
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryPurple,
+                    ),
                   );
                 }
 
@@ -396,18 +443,21 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                           color: AppTheme.errorColor,
                         ),
                         const SizedBox(height: 16),
-                        Text(
+                        const Text(
                           'Error loading rides',
-                          style: Theme.of(context).textTheme.titleLarge,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           rideProvider.error!,
                           textAlign: TextAlign.center,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppTheme.textSecondaryColor,
-                                  ),
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
@@ -429,84 +479,192 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                         const Icon(
                           Icons.directions_car_outlined,
                           size: 64,
-                          color: AppTheme.textSecondaryColor,
+                          color: AppTheme.textSecondary,
                         ),
                         const SizedBox(height: 16),
-                        Text(
+                        const Text(
                           'No rides found',
-                          style: Theme.of(context).textTheme.titleLarge,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
+                        const Text(
                           'You haven\'t taken any rides yet.',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppTheme.textSecondaryColor,
-                                  ),
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filteredRides.length,
-                  itemBuilder: (context, index) {
-                    final ride = filteredRides[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Color(int.parse(
-                              _getStatusColor(ride.status)
-                                  .replaceAll('#', '0xFF'))),
-                          child: Icon(
-                            ride.type == RideType.passenger
-                                ? Icons.person
-                                : Icons.directions_car,
-                            color: Colors.white,
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.darkCard,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  margin: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      // Table Header
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: AppTheme.darkDivider, width: 1),
                           ),
                         ),
-                        title: Text(
-                          '${ride.pickupAddress} → ${ride.dropoffAddress}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: const Row(
                           children: [
-                            Text(
-                              '${_getStatusText(ride.status)} • ${_getTypeText(ride.type)}',
-                              style: TextStyle(
-                                color: Color(int.parse(
-                                    _getStatusColor(ride.status)
-                                        .replaceAll('#', '0xFF'))),
-                                fontWeight: FontWeight.bold,
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'RIDE DETAILS',
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                            Text(
-                              '${ride.pickupTime.toString().substring(0, 16)} • \$${ride.price.toStringAsFixed(2)}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: AppTheme.textSecondaryColor,
-                                  ),
+                            Expanded(
+                              child: Text(
+                                'STATUS',
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
+                            Expanded(
+                              child: Text(
+                                'ROLE',
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                'DATE',
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 40), // Space for action button
                           ],
                         ),
-                        trailing: IconButton(
-                          onPressed: () => _showRideDetails(ride),
-                          icon: const Icon(Icons.info_outline),
-                        ),
-                        onTap: () => _navigateToRideScreen(ride),
                       ),
-                    );
-                  },
+                      // Table Rows
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: filteredRides.length,
+                          itemBuilder: (context, index) {
+                            final ride = filteredRides[index];
+                            return _buildRideRow(ride);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRideRow(Ride ride) {
+    final statusColor = _getStatusColor(ride.status);
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: AppTheme.darkDivider, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${ride.pickupAddress} → ${ride.dropoffAddress}',
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '\$${ride.price.toStringAsFixed(2)} • ${ride.distance.toStringAsFixed(1)} km',
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                _getStatusText(ride.status),
+                style: TextStyle(
+                  color: statusColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              _getTypeText(ride.type),
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              ride.pickupTime.toString().substring(0, 10),
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          IconButton(
+            onPressed: () => _showRideDetails(ride),
+            icon: const Icon(Icons.info_outline, color: AppTheme.textSecondary),
           ),
         ],
       ),

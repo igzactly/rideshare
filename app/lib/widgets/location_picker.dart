@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import '../utils/theme.dart';
 
 class LocationPicker extends StatefulWidget {
   final String title;
@@ -159,15 +160,15 @@ class _LocationPickerState extends State<LocationPicker> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.darkSurface,
+        foregroundColor: AppTheme.textPrimary,
         actions: [
           if (_selectedLocation != null)
             TextButton(
               onPressed: _confirmSelection,
               child: const Text(
                 'Confirm',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(color: AppTheme.primaryPurple, fontWeight: FontWeight.bold),
               ),
             ),
         ],
@@ -178,7 +179,7 @@ class _LocationPickerState extends State<LocationPicker> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.darkSurface,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -191,12 +192,14 @@ class _LocationPickerState extends State<LocationPicker> {
               children: [
                 TextField(
                   controller: _searchController,
+                  style: const TextStyle(color: AppTheme.textPrimary),
                   decoration: InputDecoration(
                     hintText: 'Search for a location...',
-                    prefixIcon: const Icon(Icons.search),
+                    hintStyle: const TextStyle(color: AppTheme.textTertiary),
+                    prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear),
+                            icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
                             onPressed: () {
                               _searchController.clear();
                               setState(() {
@@ -207,10 +210,18 @@ class _LocationPickerState extends State<LocationPicker> {
                         : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                      borderSide: const BorderSide(color: AppTheme.darkDivider),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppTheme.darkDivider),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[100],
+                    fillColor: AppTheme.darkCard,
                   ),
                   onChanged: (value) {
                     if (value.isNotEmpty) {
@@ -228,8 +239,9 @@ class _LocationPickerState extends State<LocationPicker> {
                   Container(
                     margin: const EdgeInsets.only(top: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.darkCard,
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.darkDivider),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.1),
@@ -251,14 +263,20 @@ class _LocationPickerState extends State<LocationPicker> {
                         ].where((e) => e != null && e.isNotEmpty).join(', ');
                         
                         return ListTile(
-                          leading: const Icon(Icons.location_on, color: Colors.blue),
+                          leading: const Icon(Icons.location_on, color: AppTheme.primaryPurple),
                           title: Text(
                             placemark.name?.isNotEmpty == true 
                                 ? placemark.name! 
                                 : placemark.street ?? 'Unknown Street',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                            ),
                           ),
-                          subtitle: Text(address),
+                          subtitle: Text(
+                            address,
+                            style: const TextStyle(color: AppTheme.textSecondary),
+                          ),
                                                        onTap: () {
                                // Use the stored coordinates for this search result
                                final index = _searchResults.indexOf(placemark);
@@ -351,7 +369,7 @@ class _LocationPickerState extends State<LocationPicker> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppTheme.darkSurface,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -363,22 +381,28 @@ class _LocationPickerState extends State<LocationPicker> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Selected Location',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                      fontSize: 16,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     _selectedAddress,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -388,7 +412,7 @@ class _LocationPickerState extends State<LocationPicker> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _getCurrentLocation,
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: AppTheme.primaryPurple,
         child: const Icon(Icons.my_location, color: Colors.white),
       ),
     );

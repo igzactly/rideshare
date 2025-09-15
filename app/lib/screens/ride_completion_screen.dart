@@ -207,7 +207,7 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
               children: [
                 Icon(
                   Icons.payment,
-                  color: AppTheme.primaryColor,
+                  color: AppTheme.primaryPurple,
                 ),
                 const SizedBox(width: 8),
                 const Text(
@@ -235,7 +235,7 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
                   ElevatedButton(
                     onPressed: _isLoading ? null : _processPayment,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: AppTheme.primaryPurple,
                       foregroundColor: Colors.white,
                     ),
                     child: _isLoading
@@ -287,7 +287,7 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
               children: [
                 Icon(
                   Icons.star,
-                  color: AppTheme.accentColor,
+                  color: AppTheme.primaryOrange,
                 ),
                 const SizedBox(width: 8),
                 const Text(
@@ -312,7 +312,7 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
                     },
                     child: Icon(
                       index < _rating ? Icons.star : Icons.star_border,
-                      color: AppTheme.accentColor,
+                      color: AppTheme.primaryOrange,
                       size: 32,
                     ),
                   );
@@ -347,7 +347,7 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
               children: [
                 Icon(
                   Icons.rate_review,
-                  color: AppTheme.secondaryColor,
+                  color: AppTheme.primaryPink,
                 ),
                 const SizedBox(width: 8),
                 const Text(
@@ -408,8 +408,8 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
                 Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
               },
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.primaryColor,
-                side: const BorderSide(color: AppTheme.primaryColor),
+                foregroundColor: AppTheme.primaryPurple,
+                side: const BorderSide(color: AppTheme.primaryPurple),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: const Text('Back to Home'),
@@ -425,7 +425,7 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ride Complete'),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primaryPurple,
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
       ),

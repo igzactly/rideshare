@@ -166,98 +166,12 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
     }
   }
 
-  Future<void> _createRide() async {
-    final rideProvider = context.read<RideProvider>();
-    final locationProvider = context.read<LocationProvider>();
-    final authProvider = context.read<AuthProvider>();
-
-    try {
-      // Check if user is authenticated
-      if (authProvider.token == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please login to create a ride'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      // Check if current location is available
-      if (locationProvider.currentLocation == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enable location services to create a ride'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      // Check if dropoff location is set
-      if (locationProvider.dropoffLocation == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select a dropoff location using the location picker'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      final rideData = {
-        'pickup_location': {
-          'latitude': (locationProvider.pickupLocation ??
-                  locationProvider.currentLocation!)
-              .latitude,
-          'longitude': (locationProvider.pickupLocation ??
-                  locationProvider.currentLocation!)
-              .longitude,
-        },
-        'dropoff_location': {
-          'latitude': locationProvider.dropoffLocation!.latitude,
-          'longitude': locationProvider.dropoffLocation!.longitude,
-        },
-        'pickup_address': _pickupController.text,
-        'dropoff_address': _dropoffController.text,
-        'pickup_time': _selectedPickupTime?.toIso8601String() ?? DateTime.now().toIso8601String(),
-        'ride_type': _selectedRideType.name,
-      };
-
-      final success = await rideProvider.createRide(rideData, authProvider.token!);
-
-      if (mounted && success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ride created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Clear form
-        _pickupController.clear();
-        _dropoffController.clear();
-        _pickupTimeController.text = 'Now';
-        _selectedPickupTime = DateTime.now();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error creating ride: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Find a Ride'),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primaryPurple,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -276,7 +190,7 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                       children: [
                         const Icon(
                           Icons.my_location,
-                          color: AppTheme.primaryColor,
+                          color: AppTheme.primaryPurple,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -295,7 +209,7 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                                   .textTheme
                                   .bodySmall
                                   ?.copyWith(
-                                    color: AppTheme.textSecondaryColor,
+                                    color: AppTheme.textSecondary,
                                   ),
                             );
                           },
@@ -308,7 +222,7 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                       icon: const Icon(Icons.refresh),
                       label: const Text('Update Location'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.secondaryColor,
+                        backgroundColor: AppTheme.primaryPink,
                         foregroundColor: Colors.white,
                       ),
                     ),
@@ -506,7 +420,7 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                               _selectedRideType = type;
                             });
                           },
-                          selectedColor: AppTheme.primaryColor,
+                          selectedColor: AppTheme.primaryPurple,
                           labelStyle: TextStyle(
                             color: _selectedRideType == type
                                 ? Colors.white
@@ -531,7 +445,7 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                     icon: const Icon(Icons.search),
                     label: const Text('Search Rides'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.secondaryColor,
+                      backgroundColor: AppTheme.primaryPink,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -543,11 +457,14 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _createRide,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Create Ride'),
+                    onPressed: () {
+                      // Navigate to ride search or show available rides
+                      // This button can be repurposed for other functionality
+                    },
+                    icon: const Icon(Icons.search),
+                    label: const Text('Find Rides'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: AppTheme.primaryPurple,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -587,7 +504,7 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                     ...rideProvider.availableRides.map((ride) => Card(
                       child: ListTile(
                         leading: const CircleAvatar(
-                          backgroundColor: AppTheme.primaryColor,
+                          backgroundColor: AppTheme.primaryPurple,
                           child: Icon(
                             Icons.directions_car,
                             color: Colors.white,

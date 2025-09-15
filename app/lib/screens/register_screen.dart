@@ -64,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Account'),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primaryPurple,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -80,7 +80,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const Icon(
                 Icons.car_rental,
                 size: 80,
-                color: AppTheme.primaryColor,
+                color: AppTheme.primaryPurple,
               ),
 
               const SizedBox(height: 20),
@@ -88,7 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Text(
                 'Join RideShare',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: AppTheme.primaryColor,
+                      color: AppTheme.primaryPurple,
                       fontWeight: FontWeight.bold,
                     ),
                 textAlign: TextAlign.center,
@@ -99,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Text(
                 'Create your account to start sharing rides',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondaryColor,
+                      color: AppTheme.textSecondary,
                     ),
                 textAlign: TextAlign.center,
               ),
@@ -258,7 +258,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       const Icon(
                         Icons.drive_eta,
-                        color: AppTheme.primaryColor,
+                        color: AppTheme.primaryPurple,
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -275,7 +275,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   .textTheme
                                   .bodySmall
                                   ?.copyWith(
-                                    color: AppTheme.textSecondaryColor,
+                                    color: AppTheme.textSecondary,
                                   ),
                             ),
                           ],
@@ -288,7 +288,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             _isDriver = value;
                           });
                         },
-                        activeColor: AppTheme.primaryColor,
+                        activeColor: AppTheme.primaryPurple,
                       ),
                     ],
                   ),
@@ -303,7 +303,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   return ElevatedButton(
                     onPressed: authProvider.isLoading ? null : _register,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: AppTheme.primaryPurple,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -340,7 +340,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Text(
                     'Already have an account? ',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondaryColor,
+                          color: AppTheme.textSecondary,
                         ),
                   ),
                   TextButton(
@@ -350,7 +350,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: const Text(
                       'Sign In',
                       style: TextStyle(
-                        color: AppTheme.primaryColor,
+                        color: AppTheme.primaryPurple,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

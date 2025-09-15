@@ -8,6 +8,7 @@ import 'package:rideshare_app/screens/splash_screen.dart';
 import 'package:rideshare_app/screens/home_screen.dart';
 import 'package:rideshare_app/screens/login_screen.dart';
 import 'package:rideshare_app/screens/register_screen.dart';
+import 'package:rideshare_app/widgets/session_manager.dart';
 import 'package:rideshare_app/utils/theme.dart';
 
 void main() async {
@@ -39,33 +40,35 @@ class RideShareApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => RideProvider()),
         ChangeNotifierProvider(create: (_) => LocationProvider()),
       ],
-      child: MaterialApp(
-        title: 'RideShare',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        home: const SplashScreen(),
-        routes: {
-          '/login': (context) => const LoginScreen(),
-          '/register': (context) => const RegisterScreen(),
-          '/home': (context) => const HomeScreen(),
-        },
-        onGenerateRoute: (settings) {
-          switch (settings.name) {
-            case '/login':
-              return MaterialPageRoute(builder: (_) => const LoginScreen());
-            case '/register':
-              return MaterialPageRoute(builder: (_) => const RegisterScreen());
-            case '/home':
-              return MaterialPageRoute(builder: (_) => const HomeScreen());
-            default:
-              return MaterialPageRoute(builder: (_) => const SplashScreen());
-          }
-        },
-        onUnknownRoute: (settings) {
-          return MaterialPageRoute(builder: (_) => const SplashScreen());
-        },
+      child: SessionManager(
+        child: MaterialApp(
+          title: 'RideShare',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.darkTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.dark,
+          home: const SplashScreen(),
+          routes: {
+            '/login': (context) => const LoginScreen(),
+            '/register': (context) => const RegisterScreen(),
+            '/home': (context) => const SessionAwareWidget(child: HomeScreen()),
+          },
+          onGenerateRoute: (settings) {
+            switch (settings.name) {
+              case '/login':
+                return MaterialPageRoute(builder: (_) => const LoginScreen());
+              case '/register':
+                return MaterialPageRoute(builder: (_) => const RegisterScreen());
+              case '/home':
+                return MaterialPageRoute(builder: (_) => const SessionAwareWidget(child: HomeScreen()));
+              default:
+                return MaterialPageRoute(builder: (_) => const SplashScreen());
+            }
+          },
+          onUnknownRoute: (settings) {
+            return MaterialPageRoute(builder: (_) => const SplashScreen());
+          },
+        ),
       ),
     );
   }

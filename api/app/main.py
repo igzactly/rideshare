@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from beanie import init_beanie
 from app import database
-from app.routes import rides, driver, payments, location, safety, environmental, feedback
+from app.routes import rides, driver, payments, location, safety, environmental, feedback, scheduled_rides, notifications, pricing, preferences, analytics
 from app.auth import auth_backend, User, UserCreate, UserRead, UserUpdate, get_user_db
 from fastapi_users import FastAPIUsers
 import uuid
@@ -48,6 +48,11 @@ app.include_router(location.router, prefix="/location", tags=["Location"])
 app.include_router(safety.router, prefix="/safety", tags=["Safety"])
 app.include_router(environmental.router, prefix="/environmental", tags=["Environmental"])
 app.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
+app.include_router(scheduled_rides.router, prefix="/scheduled-rides", tags=["Scheduled Rides"])
+app.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
+app.include_router(pricing.router, prefix="/pricing", tags=["Pricing & Earnings"])
+app.include_router(preferences.router, prefix="/preferences", tags=["Ride Preferences"])
+app.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
 
 # Authentication routes
 app.include_router(
@@ -70,15 +75,28 @@ app.include_router(
 @app.post("/auth/login")
 async def login_for_flutter(request: dict):
     """Login endpoint compatible with Flutter app"""
-    # This will be handled by the existing JWT auth router
-    # The actual implementation will be in the auth router
-    pass
+    # Redirect to the proper JWT auth endpoint
+    from fastapi_users import FastAPIUsers
+    from app.auth import auth_backend, User, UserCreate, UserRead, UserUpdate, get_user_db
+    import uuid
+    
+    fastapi_users = FastAPIUsers[User, uuid.UUID](
+        get_user_db,
+        [auth_backend],
+        User,
+        UserCreate,
+        UserUpdate,
+        UserRead,
+    )
+    
+    # This should be handled by the existing auth router
+    return {"message": "Use /auth/jwt/login endpoint"}
 
 @app.post("/auth/register")
 async def register_for_flutter(request: dict):
     """Register endpoint compatible with Flutter app"""
-    # This will be handled by the existing register router
-    pass
+    # Redirect to the proper register endpoint
+    return {"message": "Use /auth/register endpoint"}
 
 @app.get("/auth/validate")
 async def validate_token_for_flutter(user: User = Depends(fastapi_users.current_user)):

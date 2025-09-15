@@ -251,3 +251,18 @@ def update_ride_status_route(ride_id: str):
     return jsonify({"message": "Ride status updated successfully"})
 
 
+@bp.get("/my_rides")
+def get_my_rides():
+    """Get all rides for the current user (as driver or passenger)"""
+    # This endpoint would need authentication middleware to get current user
+    # For now, we'll use the existing user_id parameter approach
+    user_id = request.args.get("user_id")
+    if not user_id or not ObjectId.is_valid(user_id):
+        return jsonify({"detail": "user_id query param required"}), 400
+    
+    query = {"$or": [{"passenger_id": ObjectId(user_id)}, {"driver_id": ObjectId(user_id)}]}
+    limit = min(int(request.args.get("limit", 50)), 200)
+    docs = [serialize_with_renamed_id(d) for d in rides_collection.find(query).limit(limit)]
+    return jsonify(docs)
+
+

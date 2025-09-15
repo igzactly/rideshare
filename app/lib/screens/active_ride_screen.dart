@@ -224,7 +224,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: isCompleted ? AppTheme.primaryColor : Colors.grey[300],
+                color: isCompleted ? AppTheme.primaryPurple : Colors.grey[300],
                 shape: BoxShape.circle,
               ),
               child: isCompleted
@@ -238,7 +238,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
-                  color: isCompleted ? AppTheme.primaryColor : Colors.grey[600],
+                  color: isCompleted ? AppTheme.primaryPurple : Colors.grey[600],
                 ),
               ),
             ),
@@ -322,7 +322,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
               icon: const Icon(Icons.chat),
               label: Text('Chat with ${widget.ride.type == RideType.passenger ? 'Driver' : 'Passenger'}'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.secondaryColor,
+                backgroundColor: AppTheme.primaryPink,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -344,8 +344,8 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
               icon: const Icon(Icons.info),
               label: const Text('View Ride Details'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.primaryColor,
-                side: const BorderSide(color: AppTheme.primaryColor),
+                foregroundColor: AppTheme.primaryPurple,
+                side: const BorderSide(color: AppTheme.primaryPurple),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),
@@ -367,7 +367,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                 icon: const Icon(Icons.payment),
                 label: const Text('Pay Driver'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentColor,
+                  backgroundColor: AppTheme.primaryOrange,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -454,7 +454,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Active Ride'),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primaryPurple,
         foregroundColor: Colors.white,
         actions: [
           IconButton(

@@ -25,7 +25,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ride Details'),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primaryPurple,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -80,7 +80,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
             LinearProgressIndicator(
               value: _getProgressValue(widget.ride.status),
               backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryPurple),
             ),
           ],
         ),
@@ -99,7 +99,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
               children: [
                 Icon(
                   Icons.directions_car,
-                  color: AppTheme.primaryColor,
+                  color: AppTheme.primaryPurple,
                 ),
                 const SizedBox(width: 8),
                 const Text(
@@ -135,7 +135,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
               children: [
                 Icon(
                   Icons.person,
-                  color: AppTheme.secondaryColor,
+                  color: AppTheme.primaryPink,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -175,7 +175,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
               children: [
                 Icon(
                   Icons.history,
-                  color: AppTheme.accentColor,
+                  color: AppTheme.primaryOrange,
                 ),
                 const SizedBox(width: 8),
                 const Text(
@@ -271,7 +271,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
               icon: const Icon(Icons.payment),
               label: const Text('Pay Driver'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accentColor,
+                backgroundColor: AppTheme.primaryOrange,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -354,8 +354,8 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
             icon: const Icon(Icons.share),
             label: const Text('Share Ride Details'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.primaryColor,
-              side: const BorderSide(color: AppTheme.primaryColor),
+              foregroundColor: AppTheme.primaryPurple,
+              side: const BorderSide(color: AppTheme.primaryPurple),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
           ),

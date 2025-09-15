@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
@@ -9,6 +10,10 @@ class AuthProvider extends ChangeNotifier {
   String? _token;
   bool _isLoading = false;
   String? _error;
+  Timer? _sessionTimer;
+  DateTime? _lastActivity;
+  static const Duration _sessionTimeout = Duration(hours: 24); // 24 hours session timeout
+  static const Duration _inactivityTimeout = Duration(minutes: 30); // 30 minutes inactivity timeout
 
   User? get currentUser => _currentUser;
   String? get token => _token;
@@ -30,16 +35,25 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final storedToken = prefs.getString('auth_token');
       final storedUserData = prefs.getString('user_data');
+      final storedLoginTime = prefs.getString('login_time');
 
       debugPrint('Loading stored auth - Token: ${storedToken != null ? 'Found' : 'Not found'}, User: ${storedUserData != null ? 'Found' : 'Not found'}');
 
-      if (storedToken != null && storedUserData != null) {
+      if (storedToken != null && storedUserData != null && storedLoginTime != null) {
         _token = storedToken;
         try {
           final userMap = jsonDecode(storedUserData);
           _currentUser = User.fromJson(userMap);
+          final loginTime = DateTime.parse(storedLoginTime);
           
           debugPrint('Stored session loaded for user: ${_currentUser?.name}');
+          
+          // Check if session has expired
+          if (DateTime.now().difference(loginTime) > _sessionTimeout) {
+            debugPrint('Session expired, clearing auth');
+            await _clearStoredAuth();
+            return;
+          }
           
           // Validate token with server
           final isValid = await validateToken();
@@ -48,6 +62,8 @@ class AuthProvider extends ChangeNotifier {
             await _clearStoredAuth();
           } else {
             debugPrint('Token validation successful');
+            _startSessionTimer();
+            _lastActivity = DateTime.now();
           }
         } catch (e) {
           debugPrint('Error parsing stored user data: $e');
@@ -78,11 +94,69 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('auth_token');
       await prefs.remove('user_data');
+      await prefs.remove('login_time');
     } catch (e) {
       debugPrint('Error clearing stored auth: $e');
     }
     _token = null;
     _currentUser = null;
+    _stopSessionTimer();
+    _lastActivity = null;
+  }
+
+  void _startSessionTimer() {
+    _stopSessionTimer(); // Stop any existing timer
+    _sessionTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _checkSessionValidity();
+    });
+  }
+
+  void _stopSessionTimer() {
+    _sessionTimer?.cancel();
+    _sessionTimer = null;
+  }
+
+  void _checkSessionValidity() {
+    if (_lastActivity == null) return;
+    
+    final now = DateTime.now();
+    final timeSinceLastActivity = now.difference(_lastActivity!);
+    
+    // Check inactivity timeout
+    if (timeSinceLastActivity > _inactivityTimeout) {
+      debugPrint('Session timed out due to inactivity');
+      _handleSessionExpiry('Session expired due to inactivity');
+      return;
+    }
+    
+    // Check overall session timeout
+    final prefs = SharedPreferences.getInstance();
+    prefs.then((prefs) {
+      final loginTimeStr = prefs.getString('login_time');
+      if (loginTimeStr != null) {
+        final loginTime = DateTime.parse(loginTimeStr);
+        if (now.difference(loginTime) > _sessionTimeout) {
+          debugPrint('Session expired due to time limit');
+          _handleSessionExpiry('Session expired');
+        }
+      }
+    });
+  }
+
+  void _handleSessionExpiry(String reason) {
+    debugPrint('Handling session expiry: $reason');
+    _stopSessionTimer();
+    logout();
+    notifyListeners();
+  }
+
+  void updateLastActivity() {
+    _lastActivity = DateTime.now();
+  }
+
+  bool isSessionExpired() {
+    if (_lastActivity == null) return true;
+    return DateTime.now().difference(_lastActivity!) > _inactivityTimeout;
   }
 
   Future<void> _saveAuthData() async {
@@ -96,6 +170,9 @@ class AuthProvider extends ChangeNotifier {
         await prefs.setString('user_data', jsonEncode(_currentUser!.toJson()));
         debugPrint('User data saved for: ${_currentUser!.name}');
       }
+      // Save login time for session management
+      await prefs.setString('login_time', DateTime.now().toIso8601String());
+      debugPrint('Login time saved');
     } catch (e) {
       debugPrint('Error saving auth data: $e');
     }
@@ -115,6 +192,8 @@ class AuthProvider extends ChangeNotifier {
         _currentUser = User.fromJson(response['user']);
         // Always save auth data for session persistence
         await _saveAuthData();
+        _startSessionTimer();
+        _lastActivity = DateTime.now();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -145,6 +224,8 @@ class AuthProvider extends ChangeNotifier {
         _token = response['access_token'];
         _currentUser = User.fromJson(response['user']);
         await _saveAuthData();
+        _startSessionTimer();
+        _lastActivity = DateTime.now();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -167,6 +248,7 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('auth_token');
       await prefs.remove('user_data');
+      await prefs.remove('login_time');
     } catch (e) {
       debugPrint('Error clearing auth data: $e');
     }
@@ -174,6 +256,8 @@ class AuthProvider extends ChangeNotifier {
     _currentUser = null;
     _token = null;
     _error = null;
+    _stopSessionTimer();
+    _lastActivity = null;
     notifyListeners();
   }
 
@@ -206,5 +290,11 @@ class AuthProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _stopSessionTimer();
+    super.dispose();
   }
 }

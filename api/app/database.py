@@ -16,6 +16,12 @@ environmental_metrics_collection = database.environmental_metrics
 community_filters_collection = database.community_filters
 feedback_collection = database.feedback
 notifications_collection = database.notifications
+scheduled_rides_collection = database.scheduled_rides
+ride_preferences_collection = database.ride_preferences
+pricing_estimates_collection = database.pricing_estimates
+driver_earnings_collection = database.driver_earnings
+ride_cancellations_collection = database.ride_cancellations
+ride_analytics_collection = database.ride_analytics
 
 async def create_indexes():
     """Create database indexes for optimal performance"""
@@ -103,5 +109,44 @@ async def create_indexes():
     await notifications_collection.create_index("created_at")
     await notifications_collection.create_index("priority")
     await notifications_collection.create_index("ride_id")
+    
+    # Scheduled rides collection indexes
+    await scheduled_rides_collection.create_index("driver_id")
+    await scheduled_rides_collection.create_index("scheduled_time")
+    await scheduled_rides_collection.create_index("is_recurring")
+    await scheduled_rides_collection.create_index("recurring_pattern")
+    await scheduled_rides_collection.create_index("status")
+    await scheduled_rides_collection.create_index("pickup_coords", "2dsphere")
+    await scheduled_rides_collection.create_index("dropoff_coords", "2dsphere")
+    
+    # Ride preferences collection indexes
+    await ride_preferences_collection.create_index("user_id", unique=True)
+    await ride_preferences_collection.create_index("preferred_ride_types")
+    await ride_preferences_collection.create_index("max_price_per_km")
+    await ride_preferences_collection.create_index("preferred_vehicle_types")
+    
+    # Pricing estimates collection indexes
+    await pricing_estimates_collection.create_index("ride_id")
+    await pricing_estimates_collection.create_index("estimated_at")
+    await pricing_estimates_collection.create_index("surge_multiplier")
+    
+    # Driver earnings collection indexes
+    await driver_earnings_collection.create_index("driver_id")
+    await driver_earnings_collection.create_index("ride_id")
+    await driver_earnings_collection.create_index("payment_status")
+    await driver_earnings_collection.create_index("payout_date")
+    await driver_earnings_collection.create_index("created_at")
+    
+    # Ride cancellations collection indexes
+    await ride_cancellations_collection.create_index("ride_id")
+    await ride_cancellations_collection.create_index("cancelled_by")
+    await ride_cancellations_collection.create_index("cancellation_time")
+    await ride_cancellations_collection.create_index("refund_status")
+    
+    # Ride analytics collection indexes
+    await ride_analytics_collection.create_index("user_id")
+    await ride_analytics_collection.create_index("period_start")
+    await ride_analytics_collection.create_index("period_end")
+    await ride_analytics_collection.create_index("created_at")
     
     print("Database indexes created successfully")

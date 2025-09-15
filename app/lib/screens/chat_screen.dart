@@ -140,7 +140,7 @@ class _ChatScreenState extends State<ChatScreen> {
           if (!message.isFromCurrentUser) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: AppTheme.secondaryColor,
+              backgroundColor: AppTheme.primaryPink,
               child: Text(
                 message.senderName[0].toUpperCase(),
                 style: const TextStyle(
@@ -157,7 +157,7 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: message.isFromCurrentUser
-                    ? AppTheme.primaryColor
+                    ? AppTheme.primaryPurple
                     : Colors.grey[200],
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -191,7 +191,7 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(width: 8),
             CircleAvatar(
               radius: 16,
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: AppTheme.primaryPurple,
               child: const Icon(
                 Icons.person,
                 color: Colors.white,
@@ -271,7 +271,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primaryPurple,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -340,7 +340,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 CircleAvatar(
-                  backgroundColor: AppTheme.primaryColor,
+                  backgroundColor: AppTheme.primaryPurple,
                   child: IconButton(
                     icon: const Icon(
                       Icons.send,

@@ -91,6 +91,7 @@ class Ride(BaseModel):
     pickup_coords: Optional[List[float]]  # [latitude, longitude]
     dropoff_coords: Optional[List[float]]
     passenger_id: Optional[PyObjectId]
+    passengers: Optional[List[PyObjectId]] = []  # Multiple passengers support
     detour_km: Optional[float]
     detour_time_seconds: Optional[int]
     original_distance_km: Optional[float]
@@ -99,6 +100,18 @@ class Ride(BaseModel):
     status: RideStatus = RideStatus.ACTIVE
     pickup_time: Optional[datetime]
     dropoff_time: Optional[datetime]
+    scheduled_time: Optional[datetime]  # For scheduled rides
+    is_recurring: bool = False  # Recurring ride support
+    recurring_pattern: Optional[str] = None  # daily, weekly, monthly
+    recurring_end_date: Optional[datetime] = None
+    max_passengers: int = 1  # Maximum number of passengers
+    current_passengers: int = 0  # Current number of passengers
+    price_per_seat: Optional[float] = None  # Dynamic pricing
+    total_price: Optional[float] = None  # Total ride price
+    estimated_duration: Optional[int] = None  # Estimated duration in minutes
+    ride_type: str = "standard"  # standard, premium, eco
+    vehicle_type: Optional[str] = None  # car, van, motorcycle
+    amenities: Optional[List[str]] = []  # wifi, charging, etc.
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime]
 
@@ -242,3 +255,139 @@ class CommunityFilter(BaseModel):
     max_distance_km: float = 10.0
     trust_score_threshold: float = 3.0
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+### Ride Scheduling ###
+class ScheduledRide(BaseModel):
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    driver_id: PyObjectId
+    pickup: str
+    dropoff: str
+    pickup_coords: List[float]
+    dropoff_coords: List[float]
+    scheduled_time: datetime
+    is_recurring: bool = False
+    recurring_pattern: Optional[str] = None  # daily, weekly, monthly
+    recurring_end_date: Optional[datetime] = None
+    max_passengers: int = 1
+    price_per_seat: float
+    ride_type: str = "standard"
+    vehicle_type: Optional[str] = None
+    amenities: List[str] = []
+    status: str = "scheduled"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+### Ride Preferences ###
+class RidePreferences(BaseModel):
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    user_id: PyObjectId
+    preferred_ride_types: List[str] = ["standard"]
+    max_price_per_km: Optional[float] = None
+    preferred_vehicle_types: List[str] = []
+    required_amenities: List[str] = []
+    max_detour_minutes: int = 15
+    preferred_pickup_time_buffer: int = 5  # minutes before scheduled time
+    avoid_tolls: bool = False
+    avoid_highways: bool = False
+    preferred_music: Optional[str] = None
+    smoking_allowed: bool = False
+    pets_allowed: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime]
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+### Pricing and Cost Estimation ###
+class PricingEstimate(BaseModel):
+    ride_id: PyObjectId
+    base_price: float
+    distance_km: float
+    estimated_duration_minutes: int
+    surge_multiplier: float = 1.0
+    time_multiplier: float = 1.0
+    demand_multiplier: float = 1.0
+    final_price: float
+    breakdown: dict  # Detailed price breakdown
+    estimated_at: datetime = Field(default_factory=datetime.utcnow)
+
+### Driver Earnings ###
+class DriverEarnings(BaseModel):
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    driver_id: PyObjectId
+    ride_id: PyObjectId
+    gross_earnings: float
+    platform_fee: float
+    net_earnings: float
+    payment_status: str = "pending"  # pending, paid, failed
+    payout_date: Optional[datetime] = None
+    payment_method: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+### Ride Cancellation ###
+class RideCancellation(BaseModel):
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    ride_id: PyObjectId
+    cancelled_by: PyObjectId
+    cancellation_reason: str
+    cancellation_time: datetime = Field(default_factory=datetime.utcnow)
+    refund_amount: Optional[float] = None
+    refund_status: str = "pending"  # pending, processed, denied
+    penalty_amount: Optional[float] = None
+    notes: Optional[str] = None
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+### Notifications ###
+class Notification(BaseModel):
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    to_user_id: PyObjectId
+    from_user_id: Optional[PyObjectId] = None
+    notification_type: str  # ride_request, ride_accepted, ride_started, etc.
+    title: str
+    message: str
+    data: Optional[dict] = None  # Additional data for the notification
+    is_read: bool = False
+    priority: str = "normal"  # low, normal, high, urgent
+    ride_id: Optional[PyObjectId] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    read_at: Optional[datetime] = None
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+### Ride Analytics ###
+class RideAnalytics(BaseModel):
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    user_id: PyObjectId
+    period_start: datetime
+    period_end: datetime
+    total_rides: int = 0
+    total_distance_km: float = 0.0
+    total_co2_saved_kg: float = 0.0
+    total_money_saved: float = 0.0
+    average_rating: float = 0.0
+    favorite_routes: List[dict] = []
+    peak_usage_times: List[dict] = []
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}

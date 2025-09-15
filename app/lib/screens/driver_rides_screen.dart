@@ -123,7 +123,7 @@ class _DriverRidesScreenState extends State<DriverRidesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Offered Rides'),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primaryPurple,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -168,7 +168,7 @@ class _DriverRidesScreenState extends State<DriverRidesScreen> {
                           icon: const Icon(Icons.add),
                           label: const Text('Offer a Ride'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
+                            backgroundColor: AppTheme.primaryPurple,
                             foregroundColor: Colors.white,
                           ),
                         ),

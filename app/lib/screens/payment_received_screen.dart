@@ -162,8 +162,8 @@ class _PaymentReceivedScreenState extends State<PaymentReceivedScreen> {
                 Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
               },
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.primaryColor,
-                side: const BorderSide(color: AppTheme.primaryColor),
+                foregroundColor: AppTheme.primaryPurple,
+                side: const BorderSide(color: AppTheme.primaryPurple),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: const Text('Back to Home'),
@@ -179,7 +179,7 @@ class _PaymentReceivedScreenState extends State<PaymentReceivedScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Payment Received'),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primaryPurple,
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
       ),

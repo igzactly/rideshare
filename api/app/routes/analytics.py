@@ -1,346 +1,323 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
-from app.schemas import RideAnalytics, EnvironmentalMetrics
-from app.database import (
-    rides_collection, payments_collection, feedback_collection,
-    environmental_metrics_collection, user_profiles_collection
-)
+from fastapi import APIRouter, HTTPException, Depends
+from app.schemas import RideAnalytics, PyObjectId
+from app.database import ride_analytics_collection, rides_collection, locations_collection, environmental_metrics_collection
 from app.auth import User, fastapi_users
 from bson import ObjectId
-from typing import List, Optional
+from typing import List
 from datetime import datetime, timedelta
-import math
+import uuid
 
 router = APIRouter()
 
-@router.get("/rides", response_model=dict)
-async def get_ride_analytics(
-    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+@router.get("/dashboard", response_model=dict)
+async def get_user_dashboard(
+    period: str = "month",  # week, month, year, all
     user: User = Depends(fastapi_users.current_user)
 ):
-    """Get comprehensive ride analytics"""
-    # Parse dates
-    if start_date:
-        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    """Get user analytics dashboard"""
+    now = datetime.utcnow()
+    
+    if period == "week":
+        start_date = now - timedelta(weeks=1)
+    elif period == "month":
+        start_date = now - timedelta(days=30)
+    elif period == "year":
+        start_date = now - timedelta(days=365)
     else:
-        start_dt = datetime.utcnow() - timedelta(days=30)
+        start_date = datetime(2020, 1, 1)  # All time
     
-    if end_date:
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
-    else:
-        end_dt = datetime.utcnow()
-    
-    # Build date filter
-    date_filter = {"created_at": {"$gte": start_dt, "$lt": end_dt}}
-    
-    # Get ride statistics
-    total_rides = await rides_collection.count_documents(date_filter)
-    completed_rides = await rides_collection.count_documents({**date_filter, "status": "completed"})
-    active_rides = await rides_collection.count_documents({**date_filter, "status": "in_progress"})
-    cancelled_rides = await rides_collection.count_documents({**date_filter, "status": "cancelled"})
-    
-    # Calculate completion rate
-    completion_rate = (completed_rides / total_rides * 100) if total_rides > 0 else 0
-    
-    # Get average ride duration
-    pipeline = [
-        {"$match": {**date_filter, "status": "completed"}},
-        {"$addFields": {
-            "duration_minutes": {
-                "$divide": [
-                    {"$subtract": ["$dropoff_time", "$pickup_time"]},
-                    60000  # Convert milliseconds to minutes
-                ]
-            }
-        }},
-        {"$group": {
-            "_id": None,
-            "avg_duration": {"$avg": "$duration_minutes"},
-            "min_duration": {"$min": "$duration_minutes"},
-            "max_duration": {"$max": "$duration_minutes"}
-        }}
-    ]
-    
-    duration_stats = await rides_collection.aggregate(pipeline).to_list(1)
-    duration_data = duration_stats[0] if duration_stats else {}
-    
-    # Get rides by status
-    status_pipeline = [
-        {"$match": date_filter},
-        {"$group": {"_id": "$status", "count": {"$sum": 1}}}
-    ]
-    status_distribution = await rides_collection.aggregate(status_pipeline).to_list(100)
-    
-    # Get rides by hour of day
-    hour_pipeline = [
-        {"$match": date_filter},
-        {"$addFields": {"hour": {"$hour": "$created_at"}}},
-        {"$group": {"_id": "$hour", "count": {"$sum": 1}}},
-        {"$sort": {"_id": 1}}
-    ]
-    hourly_distribution = await rides_collection.aggregate(hour_pipeline).to_list(24)
-    
-    return {
-        "period": {
-            "start_date": start_dt.strftime("%Y-%m-%d"),
-            "end_date": (end_dt - timedelta(days=1)).strftime("%Y-%m-%d")
-        },
-        "overview": {
-            "total_rides": total_rides,
-            "completed_rides": completed_rides,
-            "active_rides": active_rides,
-            "cancelled_rides": cancelled_rides,
-            "completion_rate": round(completion_rate, 2)
-        },
-        "duration_stats": {
-            "average_minutes": round(duration_data.get("avg_duration", 0), 2),
-            "min_minutes": round(duration_data.get("min_duration", 0), 2),
-            "max_minutes": round(duration_data.get("max_duration", 0), 2)
-        },
-        "status_distribution": {item["_id"]: item["count"] for item in status_distribution},
-        "hourly_distribution": {item["_id"]: item["count"] for item in hourly_distribution}
+    # Get rides for the period
+    rides_query = {
+        "$or": [
+            {"driver_id": user.id},
+            {"passenger_id": user.id}
+        ],
+        "created_at": {"$gte": start_date}
     }
-
-@router.get("/user/{user_id}", response_model=dict)
-async def get_user_analytics(
-    user_id: str,
-    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    user: User = Depends(fastapi_users.current_user)
-):
-    """Get analytics for a specific user"""
-    if not ObjectId.is_valid(user_id):
-        raise HTTPException(status_code=400, detail="Invalid user ID")
     
-    # Users can only view their own analytics
-    if str(user.id) != user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to view this user's analytics")
+    rides = await rides_collection.find(rides_query).to_list(1000)
     
-    # Parse dates
-    if start_date:
-        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-    else:
-        start_dt = datetime.utcnow() - timedelta(days=30)
-    
-    if end_date:
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
-    else:
-        end_dt = datetime.utcnow()
-    
-    date_filter = {"created_at": {"$gte": start_dt, "$lt": end_dt}}
-    
-    # Get rides as driver
-    driver_rides = await rides_collection.find({
-        **date_filter,
-        "driver_id": ObjectId(user_id)
-    }).to_list(1000)
-    
-    # Get rides as passenger
-    passenger_rides = await rides_collection.find({
-        **date_filter,
-        "passenger_id": ObjectId(user_id)
-    }).to_list(1000)
-    
-    # Calculate driver statistics
-    driver_stats = calculate_user_ride_stats(driver_rides, "driver")
-    
-    # Calculate passenger statistics
-    passenger_stats = calculate_user_ride_stats(passenger_rides, "passenger")
-    
-    # Get user profile
-    user_profile = await user_profiles_collection.find_one({"user_id": ObjectId(user_id)})
-    
-    # Get feedback statistics
-    feedback_stats = await get_user_feedback_stats(ObjectId(user_id), date_filter)
-    
-    return {
-        "user_id": user_id,
-        "period": {
-            "start_date": start_dt.strftime("%Y-%m-%d"),
-            "end_date": (end_dt - timedelta(days=1)).strftime("%Y-%m-%d")
-        },
-        "profile": {
-            "rating": user_profile.get("rating", 0) if user_profile else 0,
-            "total_rides": user_profile.get("total_rides", 0) if user_profile else 0,
-            "is_verified": user_profile.get("is_verified", False) if user_profile else False
-        },
-        "driver_analytics": driver_stats,
-        "passenger_analytics": passenger_stats,
-        "feedback_analytics": feedback_stats
-    }
-
-def calculate_user_ride_stats(rides: List[dict], role: str) -> dict:
-    """Calculate ride statistics for a user in a specific role"""
-    if not rides:
-        return {
-            "total_rides": 0,
-            "completed_rides": 0,
-            "total_distance": 0,
-            "total_earnings": 0,
-            "average_rating": 0
-        }
-    
+    # Calculate basic stats
     total_rides = len(rides)
     completed_rides = len([r for r in rides if r.get("status") == "completed"])
     
-    # Calculate total distance
+    # Calculate distance
     total_distance = sum(r.get("total_distance_km", 0) for r in rides)
     
-    # Calculate total earnings (for drivers)
-    total_earnings = 0
-    if role == "driver":
-        total_earnings = sum(r.get("fare", 0) for r in rides)
+    # Calculate CO2 saved
+    total_co2_saved = sum(r.get("co2_saved", 0) for r in rides)
     
-    # Calculate average rating
-    ratings = [r.get("rating", 0) for r in rides if r.get("rating")]
+    # Calculate money saved (estimate)
+    total_money_saved = sum(r.get("total_price", 0) for r in rides if r.get("status") == "completed")
+    
+    # Get favorite routes
+    route_counts = {}
+    for ride in rides:
+        route_key = f"{ride.get('pickup', '')} -> {ride.get('dropoff', '')}"
+        route_counts[route_key] = route_counts.get(route_key, 0) + 1
+    
+    favorite_routes = sorted(route_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    
+    # Get peak usage times
+    hour_counts = {}
+    for ride in rides:
+        hour = ride.get("created_at", now).hour
+        hour_counts[hour] = hour_counts.get(hour, 0) + 1
+    
+    peak_hours = sorted(hour_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    
+    # Calculate average rating (if available)
+    ratings = []
+    for ride in rides:
+        if ride.get("rating"):
+            ratings.append(ride["rating"])
+    
     average_rating = sum(ratings) / len(ratings) if ratings else 0
     
     return {
+        "period": period,
+        "start_date": start_date.isoformat(),
+        "end_date": now.isoformat(),
         "total_rides": total_rides,
         "completed_rides": completed_rides,
-        "completion_rate": round((completed_rides / total_rides * 100), 2) if total_rides > 0 else 0,
-        "total_distance": round(total_distance, 2),
-        "total_earnings": round(total_earnings, 2),
-        "average_rating": round(average_rating, 2)
-    }
-
-async def get_user_feedback_stats(user_id: ObjectId, date_filter: dict) -> dict:
-    """Get feedback statistics for a user"""
-    # Get feedback given by user
-    feedback_given = await feedback_collection.count_documents({
-        **date_filter,
-        "from_user_id": user_id
-    })
-    
-    # Get feedback received by user
-    feedback_received = await feedback_collection.count_documents({
-        **date_filter,
-        "to_user_id": user_id
-    })
-    
-    # Get average rating received
-    rating_pipeline = [
-        {"$match": {**date_filter, "to_user_id": user_id}},
-        {"$group": {"_id": None, "avg_rating": {"$avg": "$rating"}}}
-    ]
-    rating_stats = await feedback_collection.aggregate(rating_pipeline).to_list(1)
-    avg_rating = rating_stats[0].get("avg_rating", 0) if rating_stats else 0
-    
-    return {
-        "feedback_given": feedback_given,
-        "feedback_received": feedback_received,
-        "average_rating_received": round(avg_rating, 2)
-    }
-
-@router.get("/platform", response_model=dict)
-async def get_platform_analytics(
-    user: User = Depends(fastapi_users.current_user)
-):
-    """Get platform-wide analytics (admin only)"""
-    # Check if user is admin (you might want to add an is_admin field to User model)
-    # For now, allowing all authenticated users to access platform analytics
-    
-    # Get total users
-    total_users = await user_profiles_collection.count_documents({})
-    verified_users = await user_profiles_collection.count_documents({"is_verified": True})
-    
-    # Get total rides
-    total_rides = await rides_collection.count_documents({})
-    completed_rides = await rides_collection.count_documents({"status": "completed"})
-    
-    # Get total payments
-    total_payments = await payments_collection.count_documents({})
-    completed_payments = await payments_collection.count_documents({"status": "completed"})
-    
-    # Calculate total revenue
-    revenue_pipeline = [
-        {"$match": {"status": "completed"}},
-        {"$group": {"_id": None, "total_revenue": {"$sum": "$amount"}}}
-    ]
-    revenue_stats = await payments_collection.aggregate(revenue_pipeline).to_list(1)
-    total_revenue = revenue_stats[0].get("total_revenue", 0) if revenue_stats else 0
-    
-    # Get environmental impact
-    env_pipeline = [
-        {"$group": {"_id": None, "total_co2_saved": {"$sum": "$co2_saved_kg"}}}
-    ]
-    env_stats = await environmental_metrics_collection.aggregate(env_pipeline).to_list(1)
-    total_co2_saved = env_stats[0].get("total_co2_saved", 0) if env_stats else 0
-    
-    # Get recent activity (last 7 days)
-    week_ago = datetime.utcnow() - timedelta(days=7)
-    recent_rides = await rides_collection.count_documents({"created_at": {"$gte": week_ago}})
-    recent_users = await user_profiles_collection.count_documents({"created_at": {"$gte": week_ago}})
-    
-    return {
-        "overview": {
-            "total_users": total_users,
-            "verified_users": verified_users,
-            "verification_rate": round((verified_users / total_users * 100), 2) if total_users > 0 else 0
-        },
-        "rides": {
-            "total_rides": total_rides,
-            "completed_rides": completed_rides,
-            "completion_rate": round((completed_rides / total_rides * 100), 2) if total_rides > 0 else 0
-        },
-        "payments": {
-            "total_payments": total_payments,
-            "completed_payments": completed_payments,
-            "success_rate": round((completed_payments / total_payments * 100), 2) if total_payments > 0 else 0,
-            "total_revenue": round(total_revenue, 2)
-        },
+        "completion_rate": (completed_rides / total_rides * 100) if total_rides > 0 else 0,
+        "total_distance_km": total_distance,
+        "total_co2_saved_kg": total_co2_saved,
+        "total_money_saved": total_money_saved,
+        "average_rating": round(average_rating, 2),
+        "favorite_routes": [{"route": route, "count": count} for route, count in favorite_routes],
+        "peak_usage_times": [{"hour": hour, "count": count} for hour, count in peak_hours],
         "environmental_impact": {
-            "total_co2_saved_kg": round(total_co2_saved, 2)
-        },
-        "recent_activity": {
-            "rides_last_7_days": recent_rides,
-            "new_users_last_7_days": recent_users
+            "co2_saved_kg": total_co2_saved,
+            "trees_equivalent": total_co2_saved / 22,  # Average tree absorbs 22kg CO2 per year
+            "fuel_saved_liters": total_co2_saved * 2.3  # Rough conversion
         }
     }
 
-@router.get("/trends", response_model=dict)
-async def get_trend_analytics(
-    days: int = Query(30, description="Number of days to analyze"),
+@router.get("/environmental", response_model=dict)
+async def get_environmental_analytics(
+    period: str = "month",
     user: User = Depends(fastapi_users.current_user)
 ):
-    """Get trend analytics over a specified period"""
-    end_date = datetime.utcnow()
-    start_date = end_date - timedelta(days=days)
+    """Get environmental impact analytics"""
+    now = datetime.utcnow()
     
-    # Get daily ride counts
-    daily_rides_pipeline = [
-        {"$match": {"created_at": {"$gte": start_date, "$lt": end_date}}},
-        {"$addFields": {"date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}}}},
-        {"$group": {"_id": "$date", "count": {"$sum": 1}}},
-        {"$sort": {"_id": 1}}
-    ]
-    daily_rides = await rides_collection.aggregate(daily_rides_pipeline).to_list(100)
+    if period == "week":
+        start_date = now - timedelta(weeks=1)
+    elif period == "month":
+        start_date = now - timedelta(days=30)
+    elif period == "year":
+        start_date = now - timedelta(days=365)
+    else:
+        start_date = datetime(2020, 1, 1)
     
-    # Get daily user registrations
-    daily_users_pipeline = [
-        {"$match": {"created_at": {"$gte": start_date, "$lt": end_date}}},
-        {"$addFields": {"date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}}}},
-        {"$group": {"_id": "$date", "count": {"$sum": 1}}},
-        {"$sort": {"_id": 1}}
-    ]
-    daily_users = await user_profiles_collection.aggregate(daily_users_pipeline).to_list(100)
+    # Get environmental metrics
+    metrics = await environmental_metrics_collection.find({
+        "user_id": user.id,
+        "timestamp": {"$gte": start_date}
+    }).to_list(1000)
     
-    # Get daily revenue
-    daily_revenue_pipeline = [
-        {"$match": {"status": "completed", "created_at": {"$gte": start_date, "$lt": end_date}}},
-        {"$addFields": {"date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}}}},
-        {"$group": {"_id": "$date", "revenue": {"$sum": "$amount"}}},
-        {"$sort": {"_id": 1}}
-    ]
-    daily_revenue = await payments_collection.aggregate(daily_revenue_pipeline).to_list(100)
+    total_co2_saved = sum(m.get("co2_saved_kg", 0) for m in metrics)
+    total_distance = sum(m.get("distance_km", 0) for m in metrics)
+    total_fuel_saved = sum(m.get("fuel_saved_liters", 0) for m in metrics)
+    
+    # Calculate daily breakdown
+    daily_breakdown = {}
+    for metric in metrics:
+        date_key = metric["timestamp"].date().isoformat()
+        if date_key not in daily_breakdown:
+            daily_breakdown[date_key] = {
+                "co2_saved": 0,
+                "distance": 0,
+                "fuel_saved": 0,
+                "rides": 0
+            }
+        daily_breakdown[date_key]["co2_saved"] += metric.get("co2_saved_kg", 0)
+        daily_breakdown[date_key]["distance"] += metric.get("distance_km", 0)
+        daily_breakdown[date_key]["fuel_saved"] += metric.get("fuel_saved_liters", 0)
+        daily_breakdown[date_key]["rides"] += 1
     
     return {
-        "period": {
-            "start_date": start_date.strftime("%Y-%m-%d"),
-            "end_date": end_date.strftime("%Y-%m-%d"),
-            "days": days
-        },
-        "daily_rides": {item["_id"]: item["count"] for item in daily_rides},
-        "daily_users": {item["_id"]: item["count"] for item in daily_users},
-        "daily_revenue": {item["_id"]: round(item["revenue"], 2) for item in daily_revenue}
-    } 
+        "period": period,
+        "total_co2_saved_kg": total_co2_saved,
+        "total_distance_km": total_distance,
+        "total_fuel_saved_liters": total_fuel_saved,
+        "trees_equivalent": total_co2_saved / 22,
+        "daily_breakdown": daily_breakdown,
+        "environmental_score": min(100, int(total_co2_saved * 10))  # Score out of 100
+    }
+
+@router.get("/earnings", response_model=dict)
+async def get_earnings_analytics(
+    period: str = "month",
+    user: User = Depends(fastapi_users.current_user)
+):
+    """Get earnings analytics for drivers"""
+    if not user.is_driver:
+        raise HTTPException(status_code=403, detail="Only drivers can view earnings analytics")
+    
+    now = datetime.utcnow()
+    
+    if period == "week":
+        start_date = now - timedelta(weeks=1)
+    elif period == "month":
+        start_date = now - timedelta(days=30)
+    elif period == "year":
+        start_date = now - timedelta(days=365)
+    else:
+        start_date = datetime(2020, 1, 1)
+    
+    # Get completed rides
+    rides = await rides_collection.find({
+        "driver_id": user.id,
+        "status": "completed",
+        "created_at": {"$gte": start_date}
+    }).to_list(1000)
+    
+    total_earnings = sum(r.get("total_price", 0) for r in rides)
+    total_rides = len(rides)
+    average_earnings_per_ride = total_earnings / total_rides if total_rides > 0 else 0
+    
+    # Calculate daily earnings
+    daily_earnings = {}
+    for ride in rides:
+        date_key = ride["created_at"].date().isoformat()
+        if date_key not in daily_earnings:
+            daily_earnings[date_key] = {"earnings": 0, "rides": 0}
+        daily_earnings[date_key]["earnings"] += ride.get("total_price", 0)
+        daily_earnings[date_key]["rides"] += 1
+    
+    # Calculate hourly earnings
+    hourly_earnings = {}
+    for ride in rides:
+        hour = ride["created_at"].hour
+        if hour not in hourly_earnings:
+            hourly_earnings[hour] = {"earnings": 0, "rides": 0}
+        hourly_earnings[hour]["earnings"] += ride.get("total_price", 0)
+        hourly_earnings[hour]["rides"] += 1
+    
+    return {
+        "period": period,
+        "total_earnings": total_earnings,
+        "total_rides": total_rides,
+        "average_earnings_per_ride": average_earnings_per_ride,
+        "daily_earnings": daily_earnings,
+        "hourly_earnings": hourly_earnings,
+        "best_day": max(daily_earnings.items(), key=lambda x: x[1]["earnings"])[0] if daily_earnings else None,
+        "best_hour": max(hourly_earnings.items(), key=lambda x: x[1]["earnings"])[0] if hourly_earnings else None
+    }
+
+@router.get("/route-analysis", response_model=dict)
+async def get_route_analysis(
+    pickup: str = None,
+    dropoff: str = None,
+    user: User = Depends(fastapi_users.current_user)
+):
+    """Analyze specific routes"""
+    query = {
+        "$or": [
+            {"driver_id": user.id},
+            {"passenger_id": user.id}
+        ],
+        "status": "completed"
+    }
+    
+    if pickup:
+        query["pickup"] = {"$regex": pickup, "$options": "i"}
+    if dropoff:
+        query["dropoff"] = {"$regex": dropoff, "$options": "i"}
+    
+    rides = await rides_collection.find(query).to_list(1000)
+    
+    if not rides:
+        return {"message": "No rides found for the specified route"}
+    
+    # Analyze the route
+    total_distance = sum(r.get("total_distance_km", 0) for r in rides)
+    total_duration = sum(r.get("estimated_duration", 0) for r in rides)
+    average_price = sum(r.get("total_price", 0) for r in rides) / len(rides)
+    
+    # Calculate frequency
+    route_frequency = {}
+    for ride in rides:
+        route_key = f"{ride.get('pickup', '')} -> {ride.get('dropoff', '')}"
+        route_frequency[route_key] = route_frequency.get(route_key, 0) + 1
+    
+    return {
+        "route": f"{pickup or 'Any'} -> {dropoff or 'Any'}",
+        "total_rides": len(rides),
+        "average_distance_km": total_distance / len(rides),
+        "average_duration_minutes": total_duration / len(rides),
+        "average_price": average_price,
+        "route_frequency": route_frequency,
+        "most_common_route": max(route_frequency.items(), key=lambda x: x[1])[0] if route_frequency else None
+    }
+
+@router.post("/generate-report", response_model=dict)
+async def generate_analytics_report(
+    period: str = "month",
+    report_type: str = "comprehensive",  # comprehensive, environmental, earnings
+    user: User = Depends(fastapi_users.current_user)
+):
+    """Generate a comprehensive analytics report"""
+    now = datetime.utcnow()
+    
+    if period == "week":
+        start_date = now - timedelta(weeks=1)
+    elif period == "month":
+        start_date = now - timedelta(days=30)
+    elif period == "year":
+        start_date = now - timedelta(days=365)
+    else:
+        start_date = datetime(2020, 1, 1)
+    
+    # Generate report data
+    report_data = {
+        "user_id": user.id,
+        "period_start": start_date,
+        "period_end": now,
+        "report_type": report_type,
+        "generated_at": now,
+        "data": {}
+    }
+    
+    if report_type in ["comprehensive", "environmental"]:
+        env_data = await get_environmental_analytics(period, user)
+        report_data["data"]["environmental"] = env_data
+    
+    if report_type in ["comprehensive", "earnings"] and user.is_driver:
+        earnings_data = await get_earnings_analytics(period, user)
+        report_data["data"]["earnings"] = earnings_data
+    
+    if report_type == "comprehensive":
+        dashboard_data = await get_user_dashboard(period, user)
+        report_data["data"]["dashboard"] = dashboard_data
+    
+    # Store report
+    result = await ride_analytics_collection.insert_one(report_data)
+    
+    return {
+        "message": "Analytics report generated successfully",
+        "report_id": str(result.inserted_id),
+        "period": period,
+        "report_type": report_type,
+        "data": report_data["data"]
+    }
+
+@router.get("/reports", response_model=List[dict])
+async def get_analytics_reports(user: User = Depends(fastapi_users.current_user)):
+    """Get all generated analytics reports"""
+    reports = await ride_analytics_collection.find({"user_id": user.id}).sort("generated_at", -1).to_list(50)
+    
+    # Return simplified report list
+    report_list = []
+    for report in reports:
+        report_list.append({
+            "id": str(report["_id"]),
+            "period_start": report["period_start"].isoformat(),
+            "period_end": report["period_end"].isoformat(),
+            "report_type": report["report_type"],
+            "generated_at": report["generated_at"].isoformat()
+        })
+    
+    return report_list

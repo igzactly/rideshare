@@ -93,20 +93,12 @@ try:
 except Exception as e:
     print(f"Failed to load safety blueprint: {e}")
 
-# Add location endpoint for Flutter app
-@app.route("/location/update", methods=["POST"])
-def update_location():
-    """Update user location - simple endpoint for Flutter app"""
-    try:
-        data = request.get_json(force=True)
-        # For now, just acknowledge the update
-        # In production, you'd store this in the database
-        return jsonify({
-            "message": "Location updated successfully",
-            "timestamp": datetime.utcnow().isoformat()
-        }), 200
-    except Exception as e:
-        return jsonify({"detail": f"Error updating location: {str(e)}"}), 400
+try:
+    from app.blueprints.location import bp as location_bp
+    app.register_blueprint(location_bp)
+    print("Location blueprint loaded successfully")
+except Exception as e:
+    print(f"Failed to load location blueprint: {e}")
 
 # Debug route to list endpoints (optional)
 @app.route("/__routes__")

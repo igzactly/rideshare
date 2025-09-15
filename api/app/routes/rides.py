@@ -190,9 +190,22 @@ async def complete_ride(ride_id: str, user: User = Depends(fastapi_users.current
 @router.get("/my_rides", response_model=List[Ride])
 async def get_my_rides(user: User = Depends(fastapi_users.current_user)):
     """Get all rides for the current user (as driver or passenger)"""
+    print(f"Getting rides for user {user.id}")
+    
     rides_as_passenger = await rides_collection.find({"passenger_id": user.id}).to_list(100)
     rides_as_driver = await rides_collection.find({"driver_id": user.id}).to_list(100)
-    return rides_as_passenger + rides_as_driver
+    
+    print(f"Found {len(rides_as_passenger)} rides as passenger")
+    print(f"Found {len(rides_as_driver)} rides as driver")
+    
+    all_rides = rides_as_passenger + rides_as_driver
+    print(f"Total rides: {len(all_rides)}")
+    
+    # Log ride details for debugging
+    for ride in all_rides:
+        print(f"Ride {ride.get('_id')}: status={ride.get('status')}, driver={ride.get('driver_id')}, passenger={ride.get('passenger_id')}")
+    
+    return all_rides
 
 @router.get("/active", response_model=List[Ride])
 async def get_active_rides(user: User = Depends(fastapi_users.current_user)):
@@ -302,4 +315,124 @@ async def delete_ride(ride_id: str, user: User = Depends(fastapi_users.current_u
     if result.deleted_count == 0:
         raise HTTPException(status_code=400, detail="Failed to delete ride")
     
-    return {"message": "Ride deleted successfully"}
+@router.post("/{ride_id}/add-passenger", response_model=dict)
+async def add_passenger_to_ride(ride_id: str, passenger_id: str, user: User = Depends(fastapi_users.current_user)):
+    """Add a passenger to a multi-passenger ride"""
+    if not ObjectId.is_valid(ride_id) or not ObjectId.is_valid(passenger_id):
+        raise HTTPException(status_code=400, detail="Invalid ride or passenger ID")
+    
+    ride = await rides_collection.find_one({"_id": ObjectId(ride_id), "driver_id": user.id})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found or not authorized")
+    
+    if ride.get("current_passengers", 0) >= ride.get("max_passengers", 1):
+        raise HTTPException(status_code=400, detail="Ride is full")
+    
+    # Add passenger to the passengers list
+    passengers = ride.get("passengers", [])
+    if ObjectId(passenger_id) not in passengers:
+        passengers.append(ObjectId(passenger_id))
+        
+        result = await rides_collection.update_one(
+            {"_id": ObjectId(ride_id)},
+            {
+                "$set": {
+                    "passengers": passengers,
+                    "current_passengers": len(passengers),
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Failed to add passenger")
+    
+    return {"message": "Passenger added successfully", "current_passengers": len(passengers)}
+
+@router.post("/{ride_id}/remove-passenger", response_model=dict)
+async def remove_passenger_from_ride(ride_id: str, passenger_id: str, user: User = Depends(fastapi_users.current_user)):
+    """Remove a passenger from a multi-passenger ride"""
+    if not ObjectId.is_valid(ride_id) or not ObjectId.is_valid(passenger_id):
+        raise HTTPException(status_code=400, detail="Invalid ride or passenger ID")
+    
+    ride = await rides_collection.find_one({"_id": ObjectId(ride_id), "driver_id": user.id})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found or not authorized")
+    
+    passengers = ride.get("passengers", [])
+    if ObjectId(passenger_id) in passengers:
+        passengers.remove(ObjectId(passenger_id))
+        
+        result = await rides_collection.update_one(
+            {"_id": ObjectId(ride_id)},
+            {
+                "$set": {
+                    "passengers": passengers,
+                    "current_passengers": len(passengers),
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Failed to remove passenger")
+    
+    return {"message": "Passenger removed successfully", "current_passengers": len(passengers)}
+
+@router.post("/{ride_id}/cancel", response_model=dict)
+async def cancel_ride(ride_id: str, cancellation_reason: str, user: User = Depends(fastapi_users.current_user)):
+    """Cancel a ride"""
+    if not ObjectId.is_valid(ride_id):
+        raise HTTPException(status_code=400, detail="Invalid ride ID")
+    
+    ride = await rides_collection.find_one({"_id": ObjectId(ride_id)})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    # Check if user is authorized to cancel
+    if ride.get("driver_id") != user.id and ride.get("passenger_id") != user.id and user.id not in ride.get("passengers", []):
+        raise HTTPException(status_code=403, detail="Not authorized to cancel this ride")
+    
+    # Update ride status
+    result = await rides_collection.update_one(
+        {"_id": ObjectId(ride_id)},
+        {
+            "$set": {
+                "status": "cancelled",
+                "cancellation_reason": cancellation_reason,
+                "cancelled_by": user.id,
+                "cancelled_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Failed to cancel ride")
+    
+    return {"message": "Ride cancelled successfully"}
+
+@router.get("/{ride_id}/passengers", response_model=dict)
+async def get_ride_passengers(ride_id: str, user: User = Depends(fastapi_users.current_user)):
+    """Get passengers for a ride"""
+    if not ObjectId.is_valid(ride_id):
+        raise HTTPException(status_code=400, detail="Invalid ride ID")
+    
+    ride = await rides_collection.find_one({"_id": ObjectId(ride_id)})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    # Check if user is part of the ride
+    if ride.get("driver_id") != user.id and ride.get("passenger_id") != user.id and user.id not in ride.get("passengers", []):
+        raise HTTPException(status_code=403, detail="Not authorized to view passengers")
+    
+    passengers = ride.get("passengers", [])
+    if ride.get("passenger_id"):
+        passengers.append(ride["passenger_id"])
+    
+    return {
+        "ride_id": ride_id,
+        "max_passengers": ride.get("max_passengers", 1),
+        "current_passengers": ride.get("current_passengers", 0),
+        "passenger_ids": [str(p) for p in passengers]
+    }
