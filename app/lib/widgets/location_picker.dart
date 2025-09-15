@@ -277,17 +277,17 @@ class _LocationPickerState extends State<LocationPicker> {
                             address,
                             style: const TextStyle(color: AppTheme.textSecondary),
                           ),
-                                                       onTap: () {
-                               // Use the stored coordinates for this search result
-                               final index = _searchResults.indexOf(placemark);
-                               if (index >= 0 && index < _searchCoordinates.length) {
-                                 final location = LatLng(
-                                   _searchCoordinates[index].latitude,
-                                   _searchCoordinates[index].longitude,
-                                 );
-                                 _selectLocation(location, address);
-                               }
-                             },
+                          onTap: () {
+                            // Use the stored coordinates for this search result
+                            final index = _searchResults.indexOf(placemark);
+                            if (index >= 0 && index < _searchCoordinates.length) {
+                              final location = LatLng(
+                                _searchCoordinates[index].latitude,
+                                _searchCoordinates[index].longitude,
+                              );
+                              _selectLocation(location, address);
+                            }
+                          },
                         );
                       },
                     ),

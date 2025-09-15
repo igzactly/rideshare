@@ -145,11 +145,12 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             Wrap(
               spacing: 8,
               children: ['standard', 'premium', 'eco', 'luxury'].map((type) {
-                final isSelected = (preferences!['preferred_ride_types'] as List?)?.contains(type) ?? false;
+                final isSelected = (preferences?['preferred_ride_types'] as List?)?.contains(type) ?? false;
                 return FilterChip(
                   label: Text(type.toUpperCase()),
                   selected: isSelected,
                   onSelected: (selected) {
+                    if (preferences == null) return;
                     setState(() {
                       final types = List<String>.from(preferences!['preferred_ride_types'] ?? []);
                       if (selected) {
@@ -184,11 +185,12 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             Wrap(
               spacing: 8,
               children: ['car', 'van', 'motorcycle', 'electric_car', 'hybrid_car'].map((type) {
-                final isSelected = (preferences!['preferred_vehicle_types'] as List?)?.contains(type) ?? false;
+                final isSelected = (preferences?['preferred_vehicle_types'] as List?)?.contains(type) ?? false;
                 return FilterChip(
                   label: Text(type.replaceAll('_', ' ').toUpperCase()),
                   selected: isSelected,
                   onSelected: (selected) {
+                    if (preferences == null) return;
                     setState(() {
                       final types = List<String>.from(preferences!['preferred_vehicle_types'] ?? []);
                       if (selected) {
@@ -233,11 +235,12 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 'car_seat',
                 'wheelchair_accessible',
               ].map((amenity) {
-                final isSelected = (preferences!['required_amenities'] as List?)?.contains(amenity) ?? false;
+                final isSelected = (preferences?['required_amenities'] as List?)?.contains(amenity) ?? false;
                 return FilterChip(
                   label: Text(amenity.replaceAll('_', ' ').toUpperCase()),
                   selected: isSelected,
                   onSelected: (selected) {
+                    if (preferences == null) return;
                     setState(() {
                       final amenities = List<String>.from(preferences!['required_amenities'] ?? []);
                       if (selected) {
@@ -270,7 +273,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              initialValue: preferences!['max_price_per_km']?.toString() ?? '',
+              initialValue: preferences?['max_price_per_km']?.toString() ?? '',
               decoration: const InputDecoration(
                 labelText: 'Maximum Price per KM (£)',
                 border: OutlineInputBorder(),
@@ -278,7 +281,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               ),
               keyboardType: TextInputType.number,
               onChanged: (value) {
-                preferences!['max_price_per_km'] = double.tryParse(value);
+                if (preferences != null) {
+                  preferences!['max_price_per_km'] = double.tryParse(value);
+                }
               },
             ),
           ],
@@ -303,7 +308,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: preferences!['max_detour_minutes'] ?? 15,
+                    value: preferences?['max_detour_minutes'] ?? 15,
                     decoration: const InputDecoration(
                       labelText: 'Max Detour Time',
                       border: OutlineInputBorder(),
@@ -317,16 +322,18 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                       );
                     }).toList(),
                     onChanged: (value) {
-                      setState(() {
-                        preferences!['max_detour_minutes'] = value;
-                      });
+                      if (preferences != null) {
+                        setState(() {
+                          preferences!['max_detour_minutes'] = value;
+                        });
+                      }
                     },
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: preferences!['preferred_pickup_time_buffer'] ?? 5,
+                    value: preferences?['preferred_pickup_time_buffer'] ?? 5,
                     decoration: const InputDecoration(
                       labelText: 'Pickup Buffer',
                       border: OutlineInputBorder(),
@@ -340,9 +347,11 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                       );
                     }).toList(),
                     onChanged: (value) {
-                      setState(() {
-                        preferences!['preferred_pickup_time_buffer'] = value;
-                      });
+                      if (preferences != null) {
+                        setState(() {
+                          preferences!['preferred_pickup_time_buffer'] = value;
+                        });
+                      }
                     },
                   ),
                 ),
@@ -351,20 +360,24 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             const SizedBox(height: 16),
             CheckboxListTile(
               title: const Text('Avoid Tolls'),
-              value: preferences!['avoid_tolls'] ?? false,
+              value: preferences?['avoid_tolls'] ?? false,
               onChanged: (value) {
-                setState(() {
-                  preferences!['avoid_tolls'] = value;
-                });
+                if (preferences != null) {
+                  setState(() {
+                    preferences!['avoid_tolls'] = value;
+                  });
+                }
               },
             ),
             CheckboxListTile(
               title: const Text('Avoid Highways'),
-              value: preferences!['avoid_highways'] ?? false,
+              value: preferences?['avoid_highways'] ?? false,
               onChanged: (value) {
-                setState(() {
-                  preferences!['avoid_highways'] = value;
-                });
+                if (preferences != null) {
+                  setState(() {
+                    preferences!['avoid_highways'] = value;
+                  });
+                }
               },
             ),
           ],
@@ -386,7 +399,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: preferences!['preferred_music'] ?? 'none',
+              value: preferences?['preferred_music'] ?? 'none',
               decoration: const InputDecoration(
                 labelText: 'Music Preference',
                 border: OutlineInputBorder(),
@@ -410,28 +423,34 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 );
               }).toList(),
               onChanged: (value) {
-                setState(() {
-                  preferences!['preferred_music'] = value;
-                });
+                if (preferences != null) {
+                  setState(() {
+                    preferences!['preferred_music'] = value;
+                  });
+                }
               },
             ),
             const SizedBox(height: 16),
             CheckboxListTile(
               title: const Text('Smoking Allowed'),
-              value: preferences!['smoking_allowed'] ?? false,
+              value: preferences?['smoking_allowed'] ?? false,
               onChanged: (value) {
-                setState(() {
-                  preferences!['smoking_allowed'] = value;
-                });
+                if (preferences != null) {
+                  setState(() {
+                    preferences!['smoking_allowed'] = value;
+                  });
+                }
               },
             ),
             CheckboxListTile(
               title: const Text('Pets Allowed'),
-              value: preferences!['pets_allowed'] ?? false,
+              value: preferences?['pets_allowed'] ?? false,
               onChanged: (value) {
-                setState(() {
-                  preferences!['pets_allowed'] = value;
-                });
+                if (preferences != null) {
+                  setState(() {
+                    preferences!['pets_allowed'] = value;
+                  });
+                }
               },
             ),
           ],

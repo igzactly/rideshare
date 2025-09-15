@@ -137,25 +137,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with TickerProviderSt
       children: [
         _buildStatCard(
           'Total Rides',
-          '${dashboardData!['total_rides'] ?? 0}',
+          '${dashboardData?['total_rides'] ?? 0}',
           Icons.directions_car,
           Colors.blue,
         ),
         _buildStatCard(
           'Completed Rides',
-          '${dashboardData!['completed_rides'] ?? 0}',
+          '${dashboardData?['completed_rides'] ?? 0}',
           Icons.check_circle,
           Colors.green,
         ),
         _buildStatCard(
           'Total Distance',
-          '${(dashboardData!['total_distance_km'] ?? 0).toStringAsFixed(1)} km',
+          '${(dashboardData?['total_distance_km'] ?? 0).toStringAsFixed(1)} km',
           Icons.straighten,
           Colors.orange,
         ),
         _buildStatCard(
           'Money Saved',
-          '£${(dashboardData!['total_money_saved'] ?? 0).toStringAsFixed(2)}',
+          '£${(dashboardData?['total_money_saved'] ?? 0).toStringAsFixed(2)}',
           Icons.savings,
           Colors.purple,
         ),
@@ -194,8 +194,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with TickerProviderSt
   }
 
   Widget _buildRideChart() {
-    final rides = dashboardData!['total_rides'] ?? 0;
-    final completed = dashboardData!['completed_rides'] ?? 0;
+    final rides = dashboardData?['total_rides'] ?? 0;
+    final completed = dashboardData?['completed_rides'] ?? 0;
     final cancelled = rides - completed;
 
     return Card(
@@ -239,7 +239,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with TickerProviderSt
   }
 
   Widget _buildFavoriteRoutes() {
-    final routes = dashboardData!['favorite_routes'] as List? ?? [];
+    final routes = dashboardData?['favorite_routes'] as List? ?? [];
     
     return Card(
       child: Padding(
@@ -267,7 +267,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with TickerProviderSt
   }
 
   Widget _buildPeakTimes() {
-    final peakTimes = dashboardData!['peak_usage_times'] as List? ?? [];
+    final peakTimes = dashboardData?['peak_usage_times'] as List? ?? [];
     
     return Card(
       child: Padding(
@@ -364,25 +364,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with TickerProviderSt
       children: [
         _buildStatCard(
           'CO2 Saved',
-          '${(environmentalData!['total_co2_saved_kg'] ?? 0).toStringAsFixed(1)} kg',
+          '${(environmentalData?['total_co2_saved_kg'] ?? 0).toStringAsFixed(1)} kg',
           Icons.eco,
           Colors.green,
         ),
         _buildStatCard(
           'Fuel Saved',
-          '${(environmentalData!['total_fuel_saved_liters'] ?? 0).toStringAsFixed(1)} L',
+          '${(environmentalData?['total_fuel_saved_liters'] ?? 0).toStringAsFixed(1)} L',
           Icons.local_gas_station,
           Colors.orange,
         ),
         _buildStatCard(
           'Trees Equivalent',
-          '${(environmentalData!['trees_equivalent'] ?? 0).toStringAsFixed(1)}',
+          '${(environmentalData?['trees_equivalent'] ?? 0).toStringAsFixed(1)}',
           Icons.park,
           Colors.brown,
         ),
         _buildStatCard(
           'Environmental Score',
-          '${environmentalData!['environmental_score'] ?? 0}/100',
+          '${environmentalData?['environmental_score'] ?? 0}/100',
           Icons.star,
           Colors.purple,
         ),
@@ -391,7 +391,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with TickerProviderSt
   }
 
   Widget _buildCO2Chart() {
-    final dailyBreakdown = environmentalData!['daily_breakdown'] as Map? ?? {};
+    final dailyBreakdown = environmentalData?['daily_breakdown'] as Map? ?? {};
     
     return Card(
       child: Padding(
@@ -474,15 +474,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with TickerProviderSt
             const SizedBox(height: 16),
             _buildImpactItem(
               'CO2 Emissions Prevented',
-              '${(environmentalData!['total_co2_saved_kg'] ?? 0).toStringAsFixed(1)} kg',
-              'Equivalent to planting ${(environmentalData!['trees_equivalent'] ?? 0).toStringAsFixed(1)} trees',
+              '${(environmentalData?['total_co2_saved_kg'] ?? 0).toStringAsFixed(1)} kg',
+              'Equivalent to planting ${(environmentalData?['trees_equivalent'] ?? 0).toStringAsFixed(1)} trees',
               Icons.eco,
               Colors.green,
             ),
             const SizedBox(height: 16),
             _buildImpactItem(
               'Fuel Consumption Reduced',
-              '${(environmentalData!['total_fuel_saved_liters'] ?? 0).toStringAsFixed(1)} liters',
+              '${(environmentalData?['total_fuel_saved_liters'] ?? 0).toStringAsFixed(1)} liters',
               'Saving money and reducing emissions',
               Icons.local_gas_station,
               Colors.orange,
@@ -490,7 +490,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with TickerProviderSt
             const SizedBox(height: 16),
             _buildImpactItem(
               'Environmental Score',
-              '${environmentalData!['environmental_score'] ?? 0}/100',
+              '${environmentalData?['environmental_score'] ?? 0}/100',
               'Your contribution to a greener planet',
               Icons.star,
               Colors.purple,

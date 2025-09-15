@@ -54,11 +54,15 @@ class RideProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
+      print('Searching rides with params: $searchParams');
       final rides = await ApiService.searchRides(searchParams, token);
+      print('Search returned ${rides.length} rides');
+      
       _availableRides = rides;
       _isLoading = false;
       notifyListeners();
     } catch (e) {
+      print('Error searching rides: $e');
       _error = 'Failed to search rides: $e';
       _isLoading = false;
       notifyListeners();

@@ -115,18 +115,9 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
             locationProvider.currentLocation!, 'Current Location');
       }
 
-      // Check if dropoff location is set
-      if (locationProvider.dropoffLocation == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select a dropoff location using the location picker'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
+      // Dropoff location is optional now - we only search by pickup location
 
-      // Search for available rides
+      // Simple search: only use pickup location
       final searchParams = {
         'pickup_location': {
           'latitude': (locationProvider.pickupLocation ??
@@ -136,14 +127,10 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                   locationProvider.currentLocation!)
               .longitude,
         },
-        'dropoff_location': {
-          'latitude': locationProvider.dropoffLocation!.latitude,
-          'longitude': locationProvider.dropoffLocation!.longitude,
-        },
-        'pickup_time': _selectedPickupTime?.toIso8601String() ?? DateTime.now().toIso8601String(),
-        'ride_type': _selectedRideType.name,
+        'radius_km': 15.0, // Increased search radius
       };
 
+      print('Search params: $searchParams');
       await rideProvider.searchRides(searchParams, authProvider.token!);
 
       if (mounted) {

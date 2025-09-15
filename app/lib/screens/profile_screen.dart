@@ -315,55 +315,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 24),
 
-                // Account Settings
-                Card(
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.notifications),
-                        title: const Text('Notifications'),
-                        subtitle: const Text('Manage notification preferences'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          // TODO: Navigate to notifications settings
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.security),
-                        title: const Text('Privacy & Security'),
-                        subtitle: const Text('Manage your privacy settings'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          // TODO: Navigate to privacy settings
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.help),
-                        title: const Text('Help & Support'),
-                        subtitle: const Text('Get help and contact support'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          // TODO: Navigate to help screen
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.info),
-                        title: const Text('About'),
-                        subtitle: const Text('App version and information'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          // TODO: Show about dialog
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
                 // Debug Session Button (for development)
                 SizedBox(
                   width: double.infinity,

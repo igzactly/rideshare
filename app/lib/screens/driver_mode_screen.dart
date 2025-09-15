@@ -78,11 +78,20 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
   }
 
   Future<void> _createRide() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      setState(() {
+        _isCreatingRide = false;
+      });
+      return;
+    }
+    
     if (_selectedDepartureTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select departure time')),
       );
+      setState(() {
+        _isCreatingRide = false;
+      });
       return;
     }
 
@@ -115,23 +124,23 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
         return;
       }
 
-             final rideData = {
-         'pickup_location': {
-           'latitude': locationProvider.pickupLocation!.latitude,
-           'longitude': locationProvider.pickupLocation!.longitude,
-         },
-         'dropoff_location': {
-           'latitude': locationProvider.dropoffLocation!.latitude,
-           'longitude': locationProvider.dropoffLocation!.longitude,
-         },
-         'pickup_address': _pickupController.text,
-         'dropoff_address': _dropoffController.text,
-         'pickup_time': _selectedDepartureTime!.toIso8601String(),
-         'ride_type': 'driver',
-         'driver_id': null, // Will be set after authProvider is declared
-         'price': double.parse(_priceController.text),
-         'status': 'pending',
-       };
+      final rideData = {
+        'pickup_location': {
+          'latitude': locationProvider.pickupLocation!.latitude,
+          'longitude': locationProvider.pickupLocation!.longitude,
+        },
+        'dropoff_location': {
+          'latitude': locationProvider.dropoffLocation!.latitude,
+          'longitude': locationProvider.dropoffLocation!.longitude,
+        },
+        'pickup_address': _pickupController.text,
+        'dropoff_address': _dropoffController.text,
+        'pickup_time': _selectedDepartureTime!.toIso8601String(),
+        'ride_type': 'driver',
+        'driver_id': null, // Will be set after authProvider is declared
+        'price': double.parse(_priceController.text),
+        'status': 'active', // Changed from 'pending' to 'active'
+      };
 
       final rideProvider = Provider.of<RideProvider>(context, listen: false);
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -149,6 +158,7 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
         return;
       }
       
+      print('Creating ride with data: $rideData');
       final success =
           await rideProvider.createRide(rideData, authProvider.token!);
 
@@ -160,8 +170,16 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
           ),
         );
         _clearForm();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to create ride. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
+      print('Error creating ride: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
