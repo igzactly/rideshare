@@ -6,6 +6,7 @@ import '../providers/ride_provider.dart';
 import '../utils/theme.dart';
 import '../models/ride.dart';
 import '../widgets/location_picker.dart';
+import '../widgets/driver_info_widget.dart';
 import '../services/api_service.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geocoding/geocoding.dart';
@@ -380,6 +381,12 @@ class _FindRidesScreenState extends State<FindRidesScreen> {
               ],
             ),
             const SizedBox(height: 12),
+            // Driver information
+            DriverInfoWidget(
+              driverId: ride.driverId,
+              showCompact: true,
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 const Icon(Icons.schedule, color: AppTheme.textSecondary, size: 14),
@@ -430,6 +437,13 @@ class _FindRidesScreenState extends State<FindRidesScreen> {
               Text('Price: £${ride.price.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.textPrimary)),
               const SizedBox(height: 8),
               Text('Pickup Time: ${ride.pickupTime.toString().substring(0, 16)}', style: const TextStyle(color: AppTheme.textPrimary)),
+              const SizedBox(height: 12),
+              const Text('Driver:', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              const SizedBox(height: 4),
+              DriverInfoWidget(
+                driverId: ride.driverId,
+                showCompact: false,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Are you sure you want to request this ride?',
