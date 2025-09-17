@@ -71,14 +71,14 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
             timePicked.minute,
           );
           _departureTimeController.text =
-              '${_selectedDepartureTime!.day}/${_selectedDepartureTime!.month}/${_selectedDepartureTime!.year} at ${timePicked.format(navigatorContext)}';
+              '${_selectedDepartureTime?.day}/${_selectedDepartureTime?.month}/${_selectedDepartureTime?.year} at ${timePicked.format(navigatorContext)}';
         });
       }
     }
   }
 
   Future<void> _createRide() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_formKey.currentState?.validate() != true) {
       setState(() {
         _isCreatingRide = false;
       });
@@ -111,6 +111,9 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
             backgroundColor: Colors.orange,
           ),
         );
+        setState(() {
+          _isCreatingRide = false;
+        });
         return;
       }
       
@@ -121,25 +124,27 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
             backgroundColor: Colors.orange,
           ),
         );
+        setState(() {
+          _isCreatingRide = false;
+        });
         return;
       }
 
       final rideData = {
         'pickup_location': {
-          'latitude': locationProvider.pickupLocation!.latitude,
-          'longitude': locationProvider.pickupLocation!.longitude,
+          'latitude': locationProvider.pickupLocation?.latitude ?? 0.0,
+          'longitude': locationProvider.pickupLocation?.longitude ?? 0.0,
         },
         'dropoff_location': {
-          'latitude': locationProvider.dropoffLocation!.latitude,
-          'longitude': locationProvider.dropoffLocation!.longitude,
+          'latitude': locationProvider.dropoffLocation?.latitude ?? 0.0,
+          'longitude': locationProvider.dropoffLocation?.longitude ?? 0.0,
         },
         'pickup_address': _pickupController.text,
         'dropoff_address': _dropoffController.text,
-        'pickup_time': _selectedDepartureTime!.toIso8601String(),
-        'ride_type': 'driver',
+        'pickup_time': _selectedDepartureTime?.toIso8601String() ?? DateTime.now().toIso8601String(),
         'driver_id': null, // Will be set after authProvider is declared
         'price': double.parse(_priceController.text),
-        'status': 'active', // Changed from 'pending' to 'active'
+        'status': 'active', // Driver creates ride as 'active' - available for passengers
       };
 
       final rideProvider = Provider.of<RideProvider>(context, listen: false);
@@ -155,6 +160,9 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
             backgroundColor: Colors.red,
           ),
         );
+        setState(() {
+          _isCreatingRide = false;
+        });
         return;
       }
       
@@ -165,11 +173,14 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Ride created successfully!'),
+            content: Text('Ride created successfully! You can now manage passenger requests.'),
             backgroundColor: Colors.green,
           ),
         );
         _clearForm();
+        
+        // Navigate to My Created Rides page
+        Navigator.pushReplacementNamed(context, '/my-rides');
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -181,6 +192,9 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
     } catch (e) {
       print('Error creating ride: $e');
       if (mounted) {
+        setState(() {
+          _isCreatingRide = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating ride: $e'),
@@ -330,8 +344,8 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                                 initialAddress: _pickupController.text,
                                 initialLocation: context.read<LocationProvider>().pickupLocation != null
                                     ? LatLng(
-                                        context.read<LocationProvider>().pickupLocation!.latitude,
-                                        context.read<LocationProvider>().pickupLocation!.longitude,
+                                        context.read<LocationProvider>().pickupLocation?.latitude ?? 0.0,
+                                        context.read<LocationProvider>().pickupLocation?.longitude ?? 0.0,
                                       )
                                     : null,
                                 onLocationSelected: (location, address) {
@@ -402,8 +416,8 @@ class _DriverModeScreenState extends State<DriverModeScreen> {
                                 initialAddress: _dropoffController.text,
                                 initialLocation: context.read<LocationProvider>().dropoffLocation != null
                                     ? LatLng(
-                                        context.read<LocationProvider>().dropoffLocation!.latitude,
-                                        context.read<LocationProvider>().dropoffLocation!.longitude,
+                                        context.read<LocationProvider>().dropoffLocation?.latitude ?? 0.0,
+                                        context.read<LocationProvider>().dropoffLocation?.longitude ?? 0.0,
                                       )
                                     : null,
                                 onLocationSelected: (location, address) {

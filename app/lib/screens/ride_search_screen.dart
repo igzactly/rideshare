@@ -188,7 +188,7 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                           builder: (context, locationProvider, child) {
                             return Text(
                               locationProvider.currentLocation != null
-                                  ? '${locationProvider.currentLocation!.latitude.toStringAsFixed(4)}, ${locationProvider.currentLocation!.longitude.toStringAsFixed(4)}'
+                                  ? '${locationProvider.currentLocation?.latitude.toStringAsFixed(4) ?? '0.0000'}, ${locationProvider.currentLocation?.longitude.toStringAsFixed(4) ?? '0.0000'}'
                                   : 'Not available',
                               style: Theme.of(context)
                                   .textTheme
@@ -228,8 +228,8 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                       initialAddress: _pickupController.text,
                       initialLocation: context.read<LocationProvider>().pickupLocation != null
                           ? LatLng(
-                              context.read<LocationProvider>().pickupLocation!.latitude,
-                              context.read<LocationProvider>().pickupLocation!.longitude,
+                              context.read<LocationProvider>().pickupLocation?.latitude ?? 0.0,
+                              context.read<LocationProvider>().pickupLocation?.longitude ?? 0.0,
                             )
                           : null,
                       onLocationSelected: (location, address) {
@@ -300,8 +300,8 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                       initialAddress: _dropoffController.text,
                       initialLocation: context.read<LocationProvider>().dropoffLocation != null
                           ? LatLng(
-                              context.read<LocationProvider>().dropoffLocation!.latitude,
-                              context.read<LocationProvider>().dropoffLocation!.longitude,
+                              context.read<LocationProvider>().dropoffLocation?.latitude ?? 0.0,
+                              context.read<LocationProvider>().dropoffLocation?.longitude ?? 0.0,
                             )
                           : null,
                       onLocationSelected: (location, address) {
@@ -507,8 +507,8 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
                             if (authProvider.token != null && authProvider.currentUser != null) {
                               final success = await rideProvider.acceptRide(
                                 ride.id, 
-                                authProvider.token!, 
-                                authProvider.currentUser!.id
+                                authProvider.token ?? '', 
+                                authProvider.currentUser?.id ?? ''
                               );
                               if (success && mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(

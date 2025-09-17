@@ -4,6 +4,7 @@ import '../providers/ride_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/ride.dart';
 import '../utils/theme.dart';
+import '../widgets/driver_info_widget.dart';
 import 'active_ride_screen.dart';
 import 'ride_details_screen.dart';
 import 'ride_completion_screen.dart';
@@ -48,6 +49,8 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
 
   Color _getStatusColor(RideStatus status) {
     switch (status) {
+      case RideStatus.active:
+        return AppTheme.primaryPurple;
       case RideStatus.pending:
         return AppTheme.warningColor;
       case RideStatus.accepted:
@@ -63,6 +66,8 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
 
   String _getStatusText(RideStatus status) {
     switch (status) {
+      case RideStatus.active:
+        return 'Active';
       case RideStatus.pending:
         return 'Pending';
       case RideStatus.accepted:
@@ -107,14 +112,56 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
     return filtered;
   }
 
+  Future<void> _acceptPassengerRequest(Ride ride) async {
+    final authProvider = context.read<AuthProvider>();
+    final rideProvider = context.read<RideProvider>();
+
+    if (authProvider.token != null && ride.passengerId.isNotEmpty) {
+      try {
+        final success = await rideProvider.acceptPassengerRequest(
+          ride.id,
+          ride.passengerId,
+          authProvider.token!,
+        );
+        
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Passenger request accepted!'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(rideProvider.error ?? 'Failed to accept passenger request'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error accepting passenger request: ${e.toString()}'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _updateRideStatus(Ride ride, RideStatus newStatus) async {
     final authProvider = context.read<AuthProvider>();
     final rideProvider = context.read<RideProvider>();
 
     if (authProvider.token != null) {
       try {
+        // Convert Flutter enum to API status format
+        String apiStatus = _convertStatusToApi(newStatus);
         await rideProvider.updateRideStatus(
-            ride.id, newStatus.name, authProvider.token!);
+            ride.id, apiStatus, authProvider.token!);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -137,22 +184,200 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
     }
   }
 
+  String _convertStatusToApi(RideStatus status) {
+    switch (status) {
+      case RideStatus.active:
+        return 'active';
+      case RideStatus.pending:
+        return 'pending';
+      case RideStatus.accepted:
+        return 'accepted';
+      case RideStatus.inProgress:
+        return 'in_progress';
+      case RideStatus.completed:
+        return 'completed';
+      case RideStatus.cancelled:
+        return 'cancelled';
+    }
+  }
+
+  Widget _buildPendingRideActions(Ride ride) {
+    final authProvider = context.read<AuthProvider>();
+    final currentUserId = authProvider.currentUser?.id ?? '';
+    
+    // Determine if current user is the driver or passenger
+    final isDriver = ride.driverId == currentUserId;
+    final isPassenger = ride.passengerId == currentUserId;
+    
+    if (isDriver && ride.passengerId.isNotEmpty) {
+      // Driver view: Show Accept/Decline buttons when passenger has requested
+      return Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                _acceptPassengerRequest(ride);
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.successColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Accept Passenger'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                _updateRideStatus(ride, RideStatus.cancelled);
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.errorColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Decline'),
+            ),
+          ),
+        ],
+      );
+    } else if (isPassenger) {
+      // Passenger view: Show awaiting approval status
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.warningColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.warningColor),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.hourglass_empty, color: AppTheme.warningColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Awaiting Driver Approval',
+                    style: TextStyle(
+                      color: AppTheme.warningColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Your ride request is pending. The driver will respond shortly.',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Default case or no specific user relationship
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryPurple.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.primaryPurple),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: AppTheme.primaryPurple),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Ride is pending confirmation',
+                style: TextStyle(
+                  color: AppTheme.primaryPurple,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildAcceptedRideActions(Ride ride) {
+    final authProvider = context.read<AuthProvider>();
+    final currentUserId = authProvider.currentUser?.id ?? '';
+    
+    // Determine if current user is the driver or passenger
+    final isDriver = ride.driverId == currentUserId;
+    final isPassenger = ride.passengerId == currentUserId;
+    
+    if (isDriver || isPassenger) {
+      // Both driver and passenger can start the ride once it's accepted
+      return ElevatedButton(
+        onPressed: () async {
+          // Update status to in_progress
+          await _updateRideStatus(ride, RideStatus.inProgress);
+          if (mounted) {
+            Navigator.pop(context);
+            // Navigate to active ride screen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ActiveRideScreen(ride: ride),
+              ),
+            );
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryPurple,
+          foregroundColor: Colors.white,
+        ),
+        child: const Text('Start Ride'),
+      );
+    } else {
+      // Default case - show status info
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryBlue.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.primaryBlue),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: AppTheme.primaryBlue),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Ride has been accepted and is ready to start',
+                style: TextStyle(
+                  color: AppTheme.primaryBlue,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   void _navigateToRideScreen(Ride ride) {
-    // Navigate to appropriate screen based on ride status and type
+    // Navigate to appropriate screen based on ride status
     if (ride.status == RideStatus.completed) {
-      if (ride.type == RideType.passenger) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => RideCompletionScreen(ride: ride),
-          ),
-        );
-      } else {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => PaymentReceivedScreen(ride: ride),
-          ),
-        );
-      }
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => RideCompletionScreen(ride: ride),
+        ),
+      );
     } else if (ride.status == RideStatus.pending || 
                ride.status == RideStatus.accepted || 
                ride.status == RideStatus.inProgress) {
@@ -214,64 +439,43 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                         ride.pickupTime.toString().substring(0, 16)),
                     if (ride.actualPickupTime != null)
                       _buildDetailRow('Actual Pickup',
-                          ride.actualPickupTime!.toString().substring(0, 16)),
+                          ride.actualPickupTime?.toString().substring(0, 16) ?? ''),
                     if (ride.completionTime != null)
                       _buildDetailRow('Completion',
-                          ride.completionTime!.toString().substring(0, 16)),
+                          ride.completionTime?.toString().substring(0, 16) ?? ''),
                     _buildDetailRow(
                         'Distance', '${ride.distance.toStringAsFixed(1)} km'),
                     _buildDetailRow(
                         'Price', '£${ride.price.toStringAsFixed(2)}'),
                     _buildDetailRow(
                         'Created', ride.createdAt.toString().substring(0, 16)),
+                    const SizedBox(height: 16),
+                    
+                    // Driver Information
+                    if (ride.driverId != null) ...[
+                      const Text(
+                        'Driver Information',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DriverInfoWidget(
+                        driverId: ride.driverId,
+                        isCompact: false,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    
                     const SizedBox(height: 20),
 
                     // Action Buttons
                     if (ride.status == RideStatus.pending)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                _updateRideStatus(ride, RideStatus.accepted);
-                                Navigator.pop(context);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.successColor,
-                                foregroundColor: Colors.white,
-                              ),
-                              child: const Text('Accept'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                _updateRideStatus(ride, RideStatus.cancelled);
-                                Navigator.pop(context);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.errorColor,
-                                foregroundColor: Colors.white,
-                              ),
-                              child: const Text('Cancel'),
-                            ),
-                          ),
-                        ],
-                      ),
+                      _buildPendingRideActions(ride),
 
                     if (ride.status == RideStatus.accepted)
-                      ElevatedButton(
-                        onPressed: () {
-                          _updateRideStatus(ride, RideStatus.inProgress);
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryPurple,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Start Ride'),
-                      ),
+                      _buildAcceptedRideActions(ride),
 
                     if (ride.status == RideStatus.inProgress)
                       ElevatedButton(
@@ -327,7 +531,7 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
-        title: const Text('My Rides'),
+        title: const Text('My Created Rides'),
         backgroundColor: AppTheme.darkSurface,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
@@ -340,6 +544,19 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
       ),
       body: Column(
         children: [
+          // Header with description
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            color: AppTheme.darkSurface,
+            child: const Text(
+              'Manage your created rides and passenger requests',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+          ),
           // Filters
           Container(
             padding: const EdgeInsets.all(16),
@@ -418,6 +635,103 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
                 ),
               ],
             ),
+          ),
+
+          // Active Rides Quick Access
+          Consumer<RideProvider>(
+            builder: (context, rideProvider, child) {
+              final activeRides = rideProvider.userRides
+                  .where((ride) => ride.status == RideStatus.inProgress)
+                  .toList();
+              
+              if (activeRides.isEmpty) return const SizedBox.shrink();
+              
+              return Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.purpleGradient,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.directions_car,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Active Rides',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...activeRides.map((ride) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${ride.pickupAddress} → ${ride.dropoffAddress}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '£${ride.price.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ActiveRideScreen(ride: ride),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: AppTheme.primaryPurple,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            ),
+                            child: const Text('Continue'),
+                          ),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              );
+            },
           ),
 
           // Rides List

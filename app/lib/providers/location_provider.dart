@@ -104,7 +104,7 @@ class LocationProvider extends ChangeNotifier {
       notifyListeners();
 
       final locationData = {
-        'coordinates': [_currentLocation!.latitude, _currentLocation!.longitude],
+        'coordinates': [_currentLocation?.latitude ?? 0.0, _currentLocation?.longitude ?? 0.0],
         'timestamp': DateTime.now().toIso8601String(),
         'accuracy': 10.0, // Default accuracy
         'speed': 0.0, // Default speed
@@ -208,8 +208,8 @@ class LocationProvider extends ChangeNotifier {
 
     try {
       return await ApiService.getNearbyDrivers(
-        _currentLocation!.latitude,
-        _currentLocation!.longitude,
+        _currentLocation?.latitude ?? 0.0,
+        _currentLocation?.longitude ?? 0.0,
         5.0, // 5km radius
         token,
       );

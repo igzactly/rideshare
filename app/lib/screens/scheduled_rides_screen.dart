@@ -577,7 +577,7 @@ class _CreateScheduledRideDialogState extends State<CreateScheduledRideDialog> {
         'dropoff': _dropoffController.text,
         'pickup_coords': [51.5074, -0.1278], // Default London coordinates
         'dropoff_coords': [51.5074, -0.1278],
-        'scheduled_time': _scheduledTime!.toIso8601String(),
+        'scheduled_time': _scheduledTime?.toIso8601String() ?? DateTime.now().toIso8601String(),
         'max_passengers': _maxPassengers,
         'price_per_seat': _pricePerSeat,
         'ride_type': _rideType,
@@ -587,7 +587,7 @@ class _CreateScheduledRideDialogState extends State<CreateScheduledRideDialog> {
         'recurring_pattern': _isRecurring ? _recurringPattern : null,
       };
 
-      final result = await ApiService.createScheduledRide(rideData, authProvider.token!);
+      final result = await ApiService.createScheduledRide(rideData, authProvider.token ?? '');
       
       if (result['success'] != false) {
         Navigator.pop(context);

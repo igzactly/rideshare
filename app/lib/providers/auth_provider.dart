@@ -167,7 +167,7 @@ class AuthProvider extends ChangeNotifier {
         debugPrint('Auth token saved');
       }
       if (_currentUser != null) {
-        await prefs.setString('user_data', jsonEncode(_currentUser!.toJson()));
+        await prefs.setString('user_data', jsonEncode(_currentUser?.toJson() ?? {}));
         debugPrint('User data saved for: ${_currentUser?.name ?? 'Unknown'}');
       }
       // Save login time for session management

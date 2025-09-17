@@ -16,4 +16,37 @@ community_filters_collection = db.community_filters
 feedback_collection = db.feedback
 notifications_collection = db.notifications
 
+def create_indexes():
+    """Create database indexes for optimal performance"""
+    print("Creating database indexes...")
+    
+    # Rides collection indexes - CRITICAL for geospatial queries
+    rides_collection.create_index("driver_id")
+    rides_collection.create_index("passenger_id")
+    rides_collection.create_index("status")
+    rides_collection.create_index("created_at")
+    rides_collection.create_index([("pickup_location", "2dsphere")])
+    rides_collection.create_index([("dropoff_location", "2dsphere")])
+    rides_collection.create_index("pickup_time")
+    rides_collection.create_index("dropoff_time")
+    
+    # Locations collection indexes
+    locations_collection.create_index("user_id")
+    locations_collection.create_index([("coordinates", "2dsphere")])
+    locations_collection.create_index("timestamp")
+    locations_collection.create_index("ride_id")
+    
+    # Drivers collection indexes
+    drivers_collection.create_index("driver_id")
+    drivers_collection.create_index("is_online")
+    drivers_collection.create_index("status")
+    drivers_collection.create_index([("current_location", "2dsphere")])
+    
+    # Users collection indexes
+    users_collection.create_index("email", unique=True)
+    users_collection.create_index("is_driver")
+    
+    print("Database indexes created successfully")
 
+# Create indexes when this module is imported
+create_indexes()

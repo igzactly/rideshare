@@ -32,7 +32,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _register() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState?.validate() == true) {
       final authProvider = context.read<AuthProvider>();
 
       try {

@@ -386,35 +386,35 @@ class _DriverRidesScreenState extends State<DriverRidesScreen> {
 
   Color _getStatusColor(RideStatus status) {
     switch (status) {
+      case RideStatus.active:
+        return AppTheme.primaryPurple;
       case RideStatus.pending:
         return Colors.orange;
       case RideStatus.accepted:
         return Colors.blue;
-                        case RideStatus.inProgress:
-                    return Colors.purple;
+      case RideStatus.inProgress:
+        return Colors.purple;
       case RideStatus.completed:
         return Colors.green;
       case RideStatus.cancelled:
         return Colors.red;
-      default:
-        return Colors.grey;
     }
   }
 
   String _getStatusText(RideStatus status) {
     switch (status) {
+      case RideStatus.active:
+        return 'Active';
       case RideStatus.pending:
         return 'Pending';
       case RideStatus.accepted:
         return 'Accepted';
-                        case RideStatus.inProgress:
-                    return 'In Progress';
+      case RideStatus.inProgress:
+        return 'In Progress';
       case RideStatus.completed:
         return 'Completed';
       case RideStatus.cancelled:
         return 'Cancelled';
-      default:
-        return 'Unknown';
     }
   }
 }

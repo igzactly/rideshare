@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/ride.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
+import '../widgets/notification_banner.dart';
 
 class RideProvider extends ChangeNotifier {
   List<Ride> _userRides = [];
@@ -86,20 +88,122 @@ class RideProvider extends ChangeNotifier {
       notifyListeners();
 
       final response = await ApiService.createRide(rideData, token);
+      print('RideProvider: Received response: $response');
 
       if (response['_id'] != null || response['id'] != null) {
-        final newRide = Ride.fromJson(response);
-        _userRides.add(newRide);
-        _currentRide = newRide;
-        // Also add to available rides if it's a driver ride
-        if (newRide.type == RideType.driver) {
+        print('RideProvider: Ride created successfully with ID: ${response['_id'] ?? response['id']}');
+        try {
+          final newRide = Ride.fromJson(response);
+          print('RideProvider: Successfully parsed ride: ${newRide.id}');
+          _userRides.add(newRide);
+          _currentRide = newRide;
+          // Add to available rides since all rides are driver rides
           _availableRides.add(newRide);
+          _isLoading = false;
+          notifyListeners();
+          return true;
+        } catch (e) {
+          print('RideProvider: Error parsing ride from JSON: $e');
+          print('RideProvider: Response data: $response');
+          _error = 'Failed to parse ride data: $e';
+          _isLoading = false;
+          notifyListeners();
+          return false;
         }
+      } else {
+        print('RideProvider: Failed to create ride - no ID in response: $response');
+        _error = response['detail'] ?? response['message'] ?? 'Failed to create ride';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> requestRide(String rideId, String passengerId, String token) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await ApiService.requestRide(rideId, passengerId, token);
+      
+      if (response['success'] == true) {
+        // Refresh user rides to show the requested ride
+        await loadUserRides(token);
+        
+        // Send notification to driver about new ride request
+        try {
+          // Find the ride to get pickup/dropoff addresses
+          final ride = _userRides.firstWhere((r) => r.id == rideId);
+          
+          await NotificationService().showRideRequestNotification(
+            passengerName: "Passenger", // This should be fetched from user data
+            pickupAddress: ride.pickupAddress,
+            dropoffAddress: ride.dropoffAddress,
+            rideId: rideId,
+          );
+        } catch (e) {
+          print('Error sending notification: $e');
+        }
+        
         _isLoading = false;
         notifyListeners();
         return true;
       } else {
-        _error = response['detail'] ?? 'Failed to create ride';
+        _error = response['message'] ?? 'Failed to request ride';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> acceptPassengerRequest(String rideId, String passengerId, String token) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await ApiService.acceptPassengerRequest(rideId, passengerId, token);
+      
+      if (response['success'] == true) {
+        // Refresh user rides to show the accepted ride
+        await loadUserRides(token);
+        
+        // Send notification to passenger
+        try {
+          // Get driver name from current user (you might want to get this from API)
+          final driverName = "Driver"; // This should be fetched from user data
+          
+          // Find the ride to get pickup/dropoff addresses
+          final ride = _userRides.firstWhere((r) => r.id == rideId);
+          
+          await NotificationService().showRideAcceptedNotification(
+            driverName: driverName,
+            pickupAddress: ride.pickupAddress,
+            dropoffAddress: ride.dropoffAddress,
+            rideId: rideId,
+          );
+        } catch (e) {
+          print('Error sending notification: $e');
+        }
+        
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = response['message'] ?? 'Failed to accept passenger request';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -160,7 +264,30 @@ class RideProvider extends ChangeNotifier {
       final response = await ApiService.updateRideStatus(rideId, status, token);
 
       if (response['message'] != null && response['message'].contains('updated')) {
-        // Status was updated successfully
+        // Status was updated successfully - refresh the user rides
+        await loadUserRides(token);
+        
+        // Send appropriate notifications based on status
+        try {
+          final ride = _userRides.firstWhere((r) => r.id == rideId);
+          
+          if (status == 'in_progress') {
+            // Notify passenger that ride has started
+            await NotificationService().showRideStartedNotification(
+              driverName: "Driver", // This should be fetched from user data
+              rideId: rideId,
+            );
+          } else if (status == 'completed') {
+            // Notify passenger that ride is completed
+            await NotificationService().showRideCompletedNotification(
+              driverName: "Driver", // This should be fetched from user data
+              rideId: rideId,
+            );
+          }
+        } catch (e) {
+          print('Error sending notification: $e');
+        }
+        
         _isLoading = false;
         notifyListeners();
         return true;

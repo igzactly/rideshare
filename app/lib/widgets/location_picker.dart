@@ -55,13 +55,15 @@ class _LocationPickerState extends State<LocationPicker> {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      setState(() {
-        _currentLocation = LatLng(position.latitude, position.longitude);
-      });
-      
-      // Center map on current location if no initial location
-      if (_selectedLocation == null) {
-        _mapController.move(_currentLocation!, 15.0);
+      if (mounted) {
+        setState(() {
+          _currentLocation = LatLng(position.latitude, position.longitude);
+        });
+        
+        // Center map on current location if no initial location
+        if (_selectedLocation == null) {
+          _mapController.move(_currentLocation!, 15.0);
+        }
       }
     } catch (e) {
       // Handle location permission errors
@@ -71,58 +73,87 @@ class _LocationPickerState extends State<LocationPicker> {
 
   Future<void> _searchLocations(String query) async {
     if (query.isEmpty) {
-      setState(() {
-        _searchResults = [];
-        _isSearching = false;
-      });
+      if (mounted) {
+        setState(() {
+          _searchResults = [];
+          _isSearching = false;
+        });
+      }
       return;
     }
 
-    setState(() {
-      _isSearching = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isSearching = true;
+      });
+    }
 
     try {
-      final locations = await locationFromAddress(query);
-      if (locations.isNotEmpty) {
-        final location = locations.first;
-        final placemarks = await placemarkFromCoordinates(
-          location.latitude,
-          location.longitude,
-        );
+      // Add timeout to prevent hanging requests
+      final locations = await locationFromAddress(query).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw Exception('Location search timeout');
+        },
+      );
+      
+      if (mounted) {
+        if (locations.isNotEmpty) {
+          final location = locations.first;
+          
+          // Add timeout for reverse geocoding as well
+          final placemarks = await placemarkFromCoordinates(
+            location.latitude,
+            location.longitude,
+          ).timeout(
+            const Duration(seconds: 3),
+            onTimeout: () {
+              throw Exception('Address lookup timeout');
+            },
+          );
 
-        setState(() {
-          _searchResults = placemarks;
-          _searchCoordinates = locations; // Store coordinates for later use
-          _isSearching = false;
-        });
-      } else {
+          setState(() {
+            _searchResults = placemarks;
+            _searchCoordinates = locations; // Store coordinates for later use
+            _isSearching = false;
+          });
+        } else {
+          setState(() {
+            _searchResults = [];
+            _searchCoordinates = [];
+            _isSearching = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
           _searchResults = [];
           _searchCoordinates = [];
           _isSearching = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        _searchResults = [];
-        _searchCoordinates = [];
-        _isSearching = false;
-      });
       debugPrint('Error searching locations: $e');
+      
+      // Show user-friendly error message for timeout
+      if (e.toString().contains('timeout')) {
+        debugPrint('Location search timed out - network may be slow');
+      }
     }
   }
 
   void _selectLocation(LatLng location, String address) {
-    setState(() {
-      _selectedLocation = location;
-      _selectedAddress = address;
-      _searchController.text = address;
-      _searchResults = [];
-    });
-    
-    // Center map on selected location
-    _mapController.move(location, 16.0);
+    if (mounted) {
+      setState(() {
+        _selectedLocation = location;
+        _selectedAddress = address;
+        _searchController.text = address;
+        _searchResults = [];
+      });
+      
+      // Center map on selected location
+      _mapController.move(location, 16.0);
+    }
   }
 
   void _onMapTap(TapPosition tapPosition, LatLng location) async {
@@ -130,6 +161,11 @@ class _LocationPickerState extends State<LocationPicker> {
       final placemarks = await placemarkFromCoordinates(
         location.latitude,
         location.longitude,
+      ).timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {
+          throw Exception('Address lookup timeout');
+        },
       );
       
       if (placemarks.isNotEmpty) {
@@ -145,6 +181,8 @@ class _LocationPickerState extends State<LocationPicker> {
       }
     } catch (e) {
       debugPrint('Error getting address for location: $e');
+      // Use coordinates as address if geocoding fails
+      _selectLocation(location, '${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}');
     }
   }
 
@@ -202,9 +240,11 @@ class _LocationPickerState extends State<LocationPicker> {
                             icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
                             onPressed: () {
                               _searchController.clear();
-                              setState(() {
-                                _searchResults = [];
-                              });
+                              if (mounted) {
+                                setState(() {
+                                  _searchResults = [];
+                                });
+                              }
                             },
                           )
                         : null,
@@ -227,9 +267,11 @@ class _LocationPickerState extends State<LocationPicker> {
                     if (value.isNotEmpty) {
                       _searchLocations(value);
                     } else {
-                      setState(() {
-                        _searchResults = [];
-                      });
+                      if (mounted) {
+                        setState(() {
+                          _searchResults = [];
+                        });
+                      }
                     }
                   },
                 ),
@@ -266,7 +308,7 @@ class _LocationPickerState extends State<LocationPicker> {
                           leading: const Icon(Icons.location_on, color: AppTheme.primaryPurple),
                           title: Text(
                             placemark.name?.isNotEmpty == true 
-                                ? placemark.name! 
+                                ? placemark.name ?? 'Unknown Location'
                                 : placemark.street ?? 'Unknown Street',
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
@@ -399,7 +441,7 @@ class _LocationPickerState extends State<LocationPicker> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}',
+                    '${_selectedLocation?.latitude.toStringAsFixed(6) ?? '0.000000'}, ${_selectedLocation?.longitude.toStringAsFixed(6) ?? '0.000000'}',
                     style: const TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 12,

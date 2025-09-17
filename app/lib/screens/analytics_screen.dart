@@ -36,11 +36,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with TickerProviderSt
     if (authProvider.token != null) {
       try {
         final dashboard = await ApiService.getAnalyticsDashboard(
-          authProvider.token!,
+          authProvider.token ?? '',
           period: selectedPeriod,
         );
         final environmental = await ApiService.getEnvironmentalAnalytics(
-          authProvider.token!,
+          authProvider.token ?? '',
           period: selectedPeriod,
         );
 

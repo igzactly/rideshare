@@ -8,11 +8,17 @@ import 'package:rideshare_app/screens/splash_screen.dart';
 import 'package:rideshare_app/screens/home_screen.dart';
 import 'package:rideshare_app/screens/login_screen.dart';
 import 'package:rideshare_app/screens/register_screen.dart';
+import 'package:rideshare_app/screens/my_rides_screen.dart';
 import 'package:rideshare_app/widgets/session_manager.dart';
 import 'package:rideshare_app/utils/theme.dart';
+import 'package:rideshare_app/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notifications (temporarily disabled)
+  await NotificationService().initialize();
+  await NotificationService().requestPermissions();
 
   // Load environment variables with fallback
   try {
@@ -52,6 +58,7 @@ class RideShareApp extends StatelessWidget {
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegisterScreen(),
             '/home': (context) => const SessionAwareWidget(child: HomeScreen()),
+            '/my-rides': (context) => const SessionAwareWidget(child: MyRidesScreen()),
           },
           onGenerateRoute: (settings) {
             switch (settings.name) {
@@ -61,6 +68,8 @@ class RideShareApp extends StatelessWidget {
                 return MaterialPageRoute(builder: (_) => const RegisterScreen());
               case '/home':
                 return MaterialPageRoute(builder: (_) => const SessionAwareWidget(child: HomeScreen()));
+              case '/my-rides':
+                return MaterialPageRoute(builder: (_) => const SessionAwareWidget(child: MyRidesScreen()));
               default:
                 return MaterialPageRoute(builder: (_) => const SplashScreen());
             }

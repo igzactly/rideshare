@@ -393,6 +393,8 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
 
   String _getStatusText(RideStatus status) {
     switch (status) {
+      case RideStatus.active:
+        return 'Active';
       case RideStatus.pending:
         return 'Pending';
       case RideStatus.accepted:
@@ -408,6 +410,8 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
 
   Color _getStatusColor(RideStatus status) {
     switch (status) {
+      case RideStatus.active:
+        return AppTheme.primaryPurple;
       case RideStatus.pending:
         return Colors.orange;
       case RideStatus.accepted:
@@ -423,6 +427,8 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
 
   double _getProgressValue(RideStatus status) {
     switch (status) {
+      case RideStatus.active:
+        return 0.1;
       case RideStatus.pending:
         return 0.25;
       case RideStatus.accepted:

@@ -131,21 +131,31 @@ class ApiService {
     String token,
   ) async {
     try {
+      print('API Service: Creating ride with data: $rideData');
+      print('API Service: Using token: ${token.substring(0, 20)}...');
+      
       final response = await http.post(
         Uri.parse('$_baseUrl/rides'),
         headers: _getAuthHeaders(token),
         body: jsonEncode(rideData),
       );
 
+      print('API Service: Ride creation response status: ${response.statusCode}');
+      print('API Service: Ride creation response body: ${response.body}');
+
       if (response.statusCode == 201) {
-        return jsonDecode(response.body);
+        final result = jsonDecode(response.body);
+        print('API Service: Ride created successfully: $result');
+        return result;
       } else {
+        print('API Service: Ride creation failed: ${response.statusCode} - ${response.body}');
         return {
           'success': false,
-          'message': 'Ride creation failed: ${response.statusCode}',
+          'message': 'Ride creation failed: ${response.statusCode} - ${response.body}',
         };
       }
     } catch (e) {
+      print('API Service: Exception during ride creation: $e');
       return {
         'success': false,
         'message': 'Network error: $e',
@@ -174,12 +184,27 @@ class ApiService {
         final data = jsonDecode(response.body);
         print('API Service: Decoded data: $data');
         
-        final rides = (data['rides'] as List)
-            .map((rideJson) => Ride.fromJson(rideJson))
-            .toList();
-        
-        print('API Service: Parsed ${rides.length} rides');
-        return rides;
+        try {
+          final rides = (data['rides'] as List)
+              .map((rideJson) {
+                try {
+                  return Ride.fromJson(rideJson);
+                } catch (e) {
+                  print('API Service: Error parsing ride: $e');
+                  print('API Service: Problematic ride data: $rideJson');
+                  return null;
+                }
+              })
+              .where((ride) => ride != null)
+              .cast<Ride>()
+              .toList();
+          
+          print('API Service: Successfully parsed ${rides.length} rides');
+          return rides;
+        } catch (e) {
+          print('API Service: Error parsing rides list: $e');
+          return [];
+        }
       } else {
         print('API Service: Error response: ${response.statusCode} - ${response.body}');
         return [];
@@ -202,33 +227,40 @@ class ApiService {
       if (userResponse.statusCode == 200) {
         final userData = jsonDecode(userResponse.body);
         currentUserId = userData['user_id'];
+        print('Got user_id from validate: $currentUserId');
+      } else {
+        print('Failed to validate token: ${userResponse.statusCode} - ${userResponse.body}');
+        return [];
       }
 
-      // Use the my_rides endpoint which gets all rides for the current user
+      // Use the my_rides endpoint with user_id parameter as fallback
       final response = await http.get(
-        Uri.parse('$_baseUrl/rides/my_rides'),
+        Uri.parse('$_baseUrl/rides/my_rides?user_id=$currentUserId'),
         headers: _getAuthHeaders(token),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('API Service: Raw response data: $data');
+        
         // The response is a direct list of rides
-        final rides = (data as List)
-            .map((rideJson) {
-              final ride = Ride.fromJson(rideJson);
-              // Determine ride type based on current user
-              if (currentUserId != null) {
-                if (rideJson['driver_id'] == currentUserId) {
-                  return ride.copyWith(type: RideType.driver);
-                } else {
-                  return ride.copyWith(type: RideType.passenger);
-                }
-              }
-              return ride;
-            })
-            .toList();
-        print('Successfully loaded ${rides.length} rides from my_rides endpoint');
-        return rides;
+        if (data is List) {
+          final rides = <Ride>[];
+          for (final rideJson in data) {
+            try {
+              final ride = Ride.fromJson(Map<String, dynamic>.from(rideJson));
+              rides.add(ride);
+            } catch (e) {
+              print('API Service: Error parsing ride: $e');
+              print('API Service: Problematic ride data: $rideJson');
+            }
+          }
+          print('Successfully loaded ${rides.length} rides from my_rides endpoint');
+          return rides;
+        } else {
+          print('API Service: Unexpected response format - expected List, got ${data.runtimeType}');
+          return [];
+        }
       } else {
         print('Failed to get user rides: ${response.statusCode} - ${response.body}');
         return [];
@@ -236,6 +268,142 @@ class ApiService {
     } catch (e) {
       print('Error getting user rides: $e');
       return [];
+    }
+  }
+
+  static Future<bool> updateDriverLocation(
+    double latitude,
+    double longitude,
+    String? rideId,
+    String token,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/location/update'),
+        headers: _getAuthHeaders(token),
+        body: jsonEncode({
+          'latitude': latitude,
+          'longitude': longitude,
+          'ride_id': rideId,
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        print('Failed to update location: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('Error updating location: $e');
+      return false;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getRideParticipantsLocations(
+    String rideId,
+    String token,
+  ) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/location/ride/$rideId/participants'),
+        headers: _getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        print('Failed to get ride participants locations: ${response.statusCode} - ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('Error getting ride participants locations: $e');
+      return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> requestRide(
+    String rideId,
+    String passengerId,
+    String token,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/rides/$rideId/request'),
+        headers: _getAuthHeaders(token),
+        body: jsonEncode({
+          'passenger_id': passengerId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        print('Failed to request ride: ${response.statusCode} - ${response.body}');
+        return {
+          'success': false,
+          'message': 'Failed to request ride: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      print('Error requesting ride: $e');
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> acceptPassengerRequest(
+    String rideId,
+    String passengerId,
+    String token,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/rides/$rideId/accept_passenger'),
+        headers: _getAuthHeaders(token),
+        body: jsonEncode({
+          'passenger_id': passengerId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        print('Failed to accept passenger request: ${response.statusCode} - ${response.body}');
+        return {
+          'success': false,
+          'message': 'Failed to accept passenger request: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      print('Error accepting passenger request: $e');
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getUserById(String userId, String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/users/$userId'),
+        headers: _getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        print('Failed to get user by ID: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error getting user by ID: $e');
+      return null;
     }
   }
 

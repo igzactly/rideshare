@@ -1,11 +1,12 @@
 import 'package:latlong2/latlong.dart';
 
 enum RideStatus {
-  pending,
-  accepted,
-  inProgress,
-  completed,
-  cancelled,
+  active,      // Driver created ride, available for passengers
+  pending,     // Passenger requested ride, waiting for driver acceptance
+  accepted,    // Driver accepted passenger request
+  inProgress,  // Ride started
+  completed,   // Ride finished
+  cancelled,   // Ride cancelled
 }
 
 enum RideType {
@@ -53,72 +54,109 @@ class Ride {
   });
 
   factory Ride.fromJson(Map<String, dynamic> json) {
-    // Handle both frontend and backend data structures
-    final id = json['id'] ?? json['_id'] ?? '';
-    final passengerId = json['passenger_id'] ?? '';
-    final driverId = json['driver_id'];
+    try {
+      print('Ride.fromJson: Parsing ride data: $json');
+      
+      // Convert dynamic map to String dynamic map to avoid type errors
+      final Map<String, dynamic> safeJson = Map<String, dynamic>.from(json);
+      // Handle both frontend and backend data structures
+      final id = safeJson['id'] ?? safeJson['_id'] ?? '';
+      final passengerId = safeJson['passenger_id'] ?? '';
+      final driverId = safeJson['driver_id'];
+      
+      print('Ride.fromJson: ID: $id, Passenger: $passengerId, Driver: $driverId');
     
     // Handle location data - backend uses GeoJSON Point format
     LatLng pickupLocation;
     LatLng dropoffLocation;
     
-    if (json['pickup_location'] != null && json['pickup_location']['coordinates'] != null) {
-      // Backend GeoJSON format: [longitude, latitude]
-      final coords = json['pickup_location']['coordinates'] as List;
-      pickupLocation = LatLng(coords[1] ?? 0.0, coords[0] ?? 0.0);
-    } else if (json['pickupLocation'] != null) {
-      // Frontend format
-      pickupLocation = LatLng(
-        json['pickupLocation']['latitude'] ?? 0.0,
-        json['pickupLocation']['longitude'] ?? 0.0,
-      );
+    if (safeJson['pickup_location'] != null) {
+      try {
+        final pickupLoc = Map<String, dynamic>.from(safeJson['pickup_location']);
+        if (pickupLoc['coordinates'] != null) {
+          // Backend GeoJSON format: [longitude, latitude]
+          final coords = pickupLoc['coordinates'] as List;
+          pickupLocation = LatLng(coords[1] ?? 0.0, coords[0] ?? 0.0);
+        } else {
+          pickupLocation = const LatLng(0.0, 0.0);
+        }
+      } catch (e) {
+        print('Ride.fromJson: Error parsing pickup_location: $e');
+        pickupLocation = const LatLng(0.0, 0.0);
+      }
+    } else if (safeJson['pickupLocation'] != null) {
+      try {
+        final pickupLoc = Map<String, dynamic>.from(safeJson['pickupLocation']);
+        pickupLocation = LatLng(
+          pickupLoc['latitude'] ?? 0.0,
+          pickupLoc['longitude'] ?? 0.0,
+        );
+      } catch (e) {
+        print('Ride.fromJson: Error parsing pickupLocation: $e');
+        pickupLocation = const LatLng(0.0, 0.0);
+      }
     } else {
       pickupLocation = const LatLng(0.0, 0.0);
     }
     
-    if (json['dropoff_location'] != null && json['dropoff_location']['coordinates'] != null) {
-      // Backend GeoJSON format: [longitude, latitude]
-      final coords = json['dropoff_location']['coordinates'] as List;
-      dropoffLocation = LatLng(coords[1] ?? 0.0, coords[0] ?? 0.0);
-    } else if (json['dropoffLocation'] != null) {
-      // Frontend format
-      dropoffLocation = LatLng(
-        json['dropoffLocation']['latitude'] ?? 0.0,
-        json['dropoffLocation']['longitude'] ?? 0.0,
-      );
+    if (safeJson['dropoff_location'] != null) {
+      try {
+        final dropoffLoc = Map<String, dynamic>.from(safeJson['dropoff_location']);
+        if (dropoffLoc['coordinates'] != null) {
+          // Backend GeoJSON format: [longitude, latitude]
+          final coords = dropoffLoc['coordinates'] as List;
+          dropoffLocation = LatLng(coords[1] ?? 0.0, coords[0] ?? 0.0);
+        } else {
+          dropoffLocation = const LatLng(0.0, 0.0);
+        }
+      } catch (e) {
+        print('Ride.fromJson: Error parsing dropoff_location: $e');
+        dropoffLocation = const LatLng(0.0, 0.0);
+      }
+    } else if (safeJson['dropoffLocation'] != null) {
+      try {
+        final dropoffLoc = Map<String, dynamic>.from(safeJson['dropoffLocation']);
+        dropoffLocation = LatLng(
+          dropoffLoc['latitude'] ?? 0.0,
+          dropoffLoc['longitude'] ?? 0.0,
+        );
+      } catch (e) {
+        print('Ride.fromJson: Error parsing dropoffLocation: $e');
+        dropoffLocation = const LatLng(0.0, 0.0);
+      }
     } else {
       dropoffLocation = const LatLng(0.0, 0.0);
     }
     
-    // Handle address data - backend might use different field names
-    final pickupAddress = json['pickup_address'] ?? json['pickup'] ?? '';
-    final dropoffAddress = json['dropoff_address'] ?? json['dropoff'] ?? '';
+    // Handle address data - backend uses different field names
+    final pickupAddress = safeJson['pickup_address'] ?? safeJson['pickup'] ?? safeJson['pickupAddress'] ?? '';
+    final dropoffAddress = safeJson['dropoff_address'] ?? safeJson['dropoff'] ?? safeJson['dropoffAddress'] ?? '';
     
     // Handle time data
-    final pickupTime = json['pickup_time'] != null 
-        ? DateTime.parse(json['pickup_time'])
+    final pickupTime = safeJson['pickup_time'] != null 
+        ? DateTime.parse(safeJson['pickup_time'])
         : DateTime.now();
-    final actualPickupTime = json['actual_pickup_time'] != null
-        ? DateTime.parse(json['actual_pickup_time'])
+    final actualPickupTime = safeJson['actual_pickup_time'] != null
+        ? DateTime.parse(safeJson['actual_pickup_time'])
         : null;
-    final completionTime = json['completion_time'] != null
-        ? DateTime.parse(json['completion_time'])
+    final completionTime = safeJson['completion_time'] != null
+        ? DateTime.parse(safeJson['completion_time'])
         : null;
     
     // Handle numeric data
-    final distance = (json['distance'] ?? json['total_distance_km'] ?? 0.0).toDouble();
-    final price = (json['price'] ?? 0.0).toDouble();
+    final distance = (safeJson['distance'] ?? safeJson['total_distance_km'] ?? 0.0).toDouble();
+    final price = (safeJson['price'] ?? 0.0).toDouble();
     
     // Handle status - backend uses different status values
     RideStatus status;
     try {
       status = RideStatus.values.firstWhere(
-        (e) => e.toString().split('.').last == json['status'],
+        (e) => e.toString().split('.').last == safeJson['status'],
         orElse: () => RideStatus.pending,
       );
     } catch (e) {
       // Map backend status values to frontend enum
-      switch (json['status']) {
+      switch (safeJson['status']) {
         case 'active':
           status = RideStatus.pending;
           break;
@@ -142,20 +180,20 @@ class Ride {
       }
     }
     
-    // Handle type - determine based on user role
-    // If the current user is the driver, it's a driver ride, otherwise passenger ride
-    // This will be determined by the calling context, for now default to passenger
-    final type = RideType.passenger; // Will be updated by the calling context
+    // Handle type - all rides are driver rides
+    final type = RideType.driver;
     
     // Handle metadata
-    final metadata = json['metadata'] ?? {};
+    final metadata = safeJson['metadata'] != null 
+        ? Map<String, dynamic>.from(safeJson['metadata'])
+        : <String, dynamic>{};
     
     // Handle timestamps
-    final createdAt = json['created_at'] != null 
-        ? DateTime.parse(json['created_at'])
+    final createdAt = safeJson['created_at'] != null 
+        ? DateTime.parse(safeJson['created_at'])
         : DateTime.now();
-    final updatedAt = json['updated_at'] != null
-        ? DateTime.parse(json['updated_at'])
+    final updatedAt = safeJson['updated_at'] != null
+        ? DateTime.parse(safeJson['updated_at'])
         : DateTime.now();
     
     return Ride(
@@ -177,6 +215,11 @@ class Ride {
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
+    } catch (e) {
+      print('Ride.fromJson: Error parsing ride: $e');
+      print('Ride.fromJson: Problematic JSON: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {

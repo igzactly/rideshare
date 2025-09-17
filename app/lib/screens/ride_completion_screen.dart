@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/ride.dart';
 import '../utils/theme.dart';
+import 'home_screen.dart';
 
 class RideCompletionScreen extends StatefulWidget {
   final Ride ride;
@@ -93,7 +94,10 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
         );
         
         // Navigate back to home
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -365,12 +369,15 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: 'Share your experience...',
+                hintStyle: const TextStyle(color: Colors.black54),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
                 filled: true,
                 fillColor: Colors.grey[50],
               ),
+              style: const TextStyle(color: Colors.black87),
+              cursorColor: Colors.black87,
             ),
           ],
         ),
@@ -405,7 +412,10 @@ class _RideCompletionScreenState extends State<RideCompletionScreen> {
             width: double.infinity,
             child: OutlinedButton(
               onPressed: () {
-                Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  (route) => false,
+                );
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.primaryPurple,
