@@ -41,7 +41,7 @@ class _PassengerInfoWidgetState extends State<PassengerInfoWidget> {
     try {
       final response = await ApiService.getUserById(widget.passengerId!, '');
       
-      if (response['success'] != false && response['id'] != null) {
+      if (response != null && response['success'] != false && response['id'] != null) {
         setState(() {
           _passenger = User.fromJson(response);
           _isLoading = false;

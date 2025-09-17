@@ -7,6 +7,7 @@ import '../utils/theme.dart';
 import '../models/ride.dart';
 import '../services/api_service.dart';
 import '../widgets/driver_info_widget.dart';
+import '../widgets/location_status_widget.dart';
 import 'find_rides_screen.dart';
 import 'active_ride_screen.dart';
 
@@ -502,6 +503,15 @@ class _PassengerDashboardScreenState extends State<PassengerDashboardScreen> {
                 ),
               ],
             ),
+            // Live location status for in-progress rides
+            if (ride.status == RideStatus.inProgress) ...[
+              const SizedBox(height: 12),
+              LocationStatusWidget(
+                rideId: ride.id,
+                token: context.read<AuthProvider>().token ?? '',
+                isDriver: false,
+              ),
+            ],
           ],
         ),
       ),

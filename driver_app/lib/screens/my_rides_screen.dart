@@ -5,6 +5,7 @@ import '../providers/ride_provider.dart';
 import '../utils/theme.dart';
 import '../models/ride.dart';
 import '../widgets/passenger_info_widget.dart';
+import '../widgets/location_status_widget.dart';
 import 'active_ride_screen.dart';
 
 class MyRidesScreen extends StatefulWidget {
@@ -339,6 +340,15 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
               PassengerInfoWidget(
                 passengerId: ride.passengerId,
                 showCompact: true,
+              ),
+            ],
+            // Live location status for in-progress rides
+            if (ride.status == RideStatus.inProgress) ...[
+              const SizedBox(height: 8),
+              LocationStatusWidget(
+                rideId: ride.id,
+                token: context.read<AuthProvider>().token ?? '',
+                isDriver: true,
               ),
             ],
           ],

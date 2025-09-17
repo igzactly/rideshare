@@ -5,6 +5,7 @@ import '../providers/ride_provider.dart';
 import '../utils/theme.dart';
 import '../models/ride.dart';
 import '../widgets/driver_info_widget.dart';
+import '../widgets/live_tracking_widget.dart';
 
 class ActiveRideScreen extends StatefulWidget {
   final Ride ride;
@@ -141,6 +142,8 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
             const SizedBox(height: 20),
             _buildDriverInfo(),
             const SizedBox(height: 20),
+            _buildLiveTracking(),
+            const SizedBox(height: 20),
             _buildActionButtons(),
           ],
         ),
@@ -258,6 +261,21 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
       return DriverInfoWidget(
         driverId: widget.ride.driverId,
         showCompact: false,
+      );
+    }
+    
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildLiveTracking() {
+    // Only show live tracking for accepted and in-progress rides
+    if (_status == RideStatus.accepted || _status == RideStatus.inProgress) {
+      final authProvider = context.read<AuthProvider>();
+      return LiveTrackingWidget(
+        rideId: widget.ride.id,
+        token: authProvider.token ?? '',
+        isDriver: false,
+        initialLocation: widget.ride.pickupLocation,
       );
     }
     

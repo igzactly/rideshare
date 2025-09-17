@@ -6,7 +6,7 @@ import '../models/ride.dart';
 import '../middleware/api_session_middleware.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://158.158.41.106:8000';
+  static const String _baseUrl = 'http://158.158.41.106:8000'; // Live API server
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',
   };

@@ -93,12 +93,121 @@ try:
 except Exception as e:
     print(f"Failed to load safety blueprint: {e}")
 
+# Location endpoints (simplified for live tracking)
+@app.route("/location/ride/<ride_id>/participants")
+def get_ride_participants_locations(ride_id):
+    """Get current locations of all participants in a ride - simplified version"""
+    try:
+        from app.db_sync import locations_collection
+        from datetime import datetime, timedelta
+        from bson import ObjectId
+        
+        # Get recent locations for ride participants (last 10 minutes)
+        recent_locations = list(locations_collection.find({
+            "ride_id": ObjectId(ride_id),
+            "timestamp": {"$gte": datetime.utcnow() - timedelta(minutes=10)}
+        }).sort("timestamp", -1).limit(10))
+        
+        # Convert ObjectId to string and format response
+        result = []
+        for loc in recent_locations:
+            result.append({
+                "user_id": str(loc.get("user_id", "")),
+                "location": {
+                    "type": "Point",
+                    "coordinates": loc.get("coordinates", [0, 0])
+                },
+                "timestamp": loc.get("timestamp", datetime.utcnow()).isoformat(),
+                "ride_id": str(loc.get("ride_id", ""))
+            })
+        
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error getting ride participants locations: {e}")
+        return jsonify([])
+
+@app.route("/location/update", methods=["POST"])
+def update_location():
+    """Update user location - simplified version"""
+    try:
+        from app.db_sync import locations_collection
+        from datetime import datetime
+        from bson import ObjectId
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"detail": "No data provided"}), 400
+        
+        # Basic location update
+        location_data = {
+            "user_id": data.get("user_id"),
+            "coordinates": data.get("coordinates", [0, 0]),
+            "timestamp": datetime.utcnow(),
+            "accuracy": data.get("accuracy", 0),
+            "speed": data.get("speed", 0),
+            "heading": data.get("heading", 0)
+        }
+        
+        # Add ride_id if provided
+        if data.get("ride_id"):
+            location_data["ride_id"] = ObjectId(data["ride_id"])
+        
+        result = locations_collection.insert_one(location_data)
+        
+        return jsonify({
+            "success": True,
+            "location_id": str(result.inserted_id),
+            "timestamp": location_data["timestamp"].isoformat()
+        })
+    except Exception as e:
+        print(f"Error updating location: {e}")
+        return jsonify({"detail": f"Error updating location: {str(e)}"}), 400
+
+@app.route("/location/live-tracking/start", methods=["POST"])
+def start_live_tracking():
+    """Start live location tracking for a ride"""
+    try:
+        data = request.get_json()
+        ride_id = data.get("ride_id")
+        if not ride_id:
+            return jsonify({"detail": "ride_id is required"}), 400
+        
+        # For now, just return success - actual tracking logic can be added later
+        return jsonify({
+            "success": True,
+            "message": "Live tracking started",
+            "ride_id": ride_id
+        })
+    except Exception as e:
+        print(f"Error starting live tracking: {e}")
+        return jsonify({"detail": f"Error starting live tracking: {str(e)}"}), 400
+
+@app.route("/location/live-tracking/stop", methods=["POST"])
+def stop_live_tracking():
+    """Stop live location tracking for a ride"""
+    try:
+        data = request.get_json()
+        ride_id = data.get("ride_id")
+        if not ride_id:
+            return jsonify({"detail": "ride_id is required"}), 400
+        
+        # For now, just return success - actual tracking logic can be added later
+        return jsonify({
+            "success": True,
+            "message": "Live tracking stopped",
+            "ride_id": ride_id
+        })
+    except Exception as e:
+        print(f"Error stopping live tracking: {e}")
+        return jsonify({"detail": f"Error stopping live tracking: {str(e)}"}), 400
+
 try:
     from app.blueprints.location import bp as location_bp
     app.register_blueprint(location_bp)
     print("Location blueprint loaded successfully")
 except Exception as e:
     print(f"Failed to load location blueprint: {e}")
+    print("Using simplified location endpoints instead")
 
 # Debug route to list endpoints (optional)
 @app.route("/__routes__")

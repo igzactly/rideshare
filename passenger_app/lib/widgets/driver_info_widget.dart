@@ -39,10 +39,9 @@ class _DriverInfoWidgetState extends State<DriverInfoWidget> {
     });
 
     try {
-      // Note: You'll need to implement getUserById in ApiService if it doesn't exist
       final response = await ApiService.getUserById(widget.driverId!, '');
       
-      if (response['success'] != false && response['id'] != null) {
+      if (response != null && response['success'] != false && response['id'] != null) {
         setState(() {
           _driver = User.fromJson(response);
           _isLoading = false;
