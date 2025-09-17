@@ -1,0 +1,56 @@
+name: rideshare_driver
+description: RideShare Driver App - For drivers to offer rides and manage passengers
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # HTTP and networking
+  http: ^1.1.0
+  
+  # State management
+  provider: ^6.0.5
+  
+  # Local storage
+  shared_preferences: ^2.2.2
+  
+  # Authentication
+  jose: ^0.3.4
+  
+  # Location services
+  geolocator: ^10.1.0
+  geocoding: ^2.1.1
+  
+  # Map integration
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.1
+  
+  # Environment variables
+  flutter_dotenv: ^5.1.0
+  
+  # WebSocket
+  web_socket_channel: ^2.4.0
+  
+  # Image Handling
+  image_picker: ^1.0.4
+  
+  # UI
+  cupertino_icons: ^1.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/icons/
+    - assets/images/
+    - .env
