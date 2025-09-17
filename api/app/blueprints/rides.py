@@ -242,69 +242,105 @@ def find_rides():
         return jsonify({"detail": f"Request processing error: {str(e)}"}), 400
     
     try:
-        # Enhanced search: try multiple location field formats
-        search_queries = []
+        # Get all active rides first, then filter by proximity
+        all_rides = []
         
-        # Query 1: Simple status-based search first (most reliable)
-        search_queries.append({
-            "status": {"$in": ["active"]}  # Only search for active rides
-        })
-        
-        # Query 2: Simple pickup_location existence check
-        search_queries.append({
-            "pickup_location": {"$exists": True},
-            "status": {"$in": ["active", "pending"]}
-        })
-        
-        # Query 3: GeoJSON pickup_location format (only if indexes exist)
-        search_queries.append({
-            "pickup_location": {
-                "$near": {
-                    "$geometry": pickup_point,
-                    "$maxDistance": int(radius_km * 1000),
-                }
-            },
-            "status": {"$in": ["active"]}
-        })
-        
-        # Try each query format
-        all_docs = []
-        for i, query in enumerate(search_queries):
+        # Get all active rides from database
+        try:
+            all_rides = list(rides_collection.find({"status": {"$in": ["active"]}}).limit(100))
+            print(f"Found {len(all_rides)} active rides in database")
+        except Exception as e:
+            print(f"Error fetching active rides: {e}")
+            # Fallback to get any rides
             try:
-                docs = list(rides_collection.find(query).limit(limit))
-                print(f"Query {i+1} found {len(docs)} rides")
-                all_docs.extend(docs)
-                if docs:  # If we found rides, don't try more complex queries
-                    break
+                all_rides = list(rides_collection.find({}).limit(50))
+                print(f"Fallback: Found {len(all_rides)} total rides")
+            except Exception as e2:
+                print(f"Fallback query also failed: {e2}")
+                return jsonify({"rides": []})
+        
+        # Filter rides by pickup location proximity
+        nearby_rides = []
+        user_lat = pickup_point["coordinates"][1]  # latitude
+        user_lng = pickup_point["coordinates"][0]  # longitude
+        
+        print(f"User location: lat={user_lat}, lng={user_lng}")
+        
+        for ride in all_rides:
+            try:
+                ride_pickup = ride.get("pickup_location")
+                if not ride_pickup:
+                    continue
+                
+                # Handle different pickup location formats
+                ride_lat = None
+                ride_lng = None
+                
+                # GeoJSON format: {"type": "Point", "coordinates": [lng, lat]}
+                if isinstance(ride_pickup, dict) and ride_pickup.get("type") == "Point":
+                    coords = ride_pickup.get("coordinates", [])
+                    if len(coords) >= 2:
+                        ride_lng = float(coords[0])
+                        ride_lat = float(coords[1])
+                
+                # Object format: {"latitude": lat, "longitude": lng}
+                elif isinstance(ride_pickup, dict) and "latitude" in ride_pickup and "longitude" in ride_pickup:
+                    ride_lat = float(ride_pickup["latitude"])
+                    ride_lng = float(ride_pickup["longitude"])
+                
+                if ride_lat is None or ride_lng is None:
+                    print(f"Skipping ride {ride.get('_id')} - invalid pickup location format: {ride_pickup}")
+                    continue
+                
+                # Calculate distance using Haversine formula (approximate)
+                import math
+                
+                def haversine_distance(lat1, lng1, lat2, lng2):
+                    """Calculate distance between two points in kilometers"""
+                    R = 6371  # Earth's radius in kilometers
+                    
+                    lat1_rad = math.radians(lat1)
+                    lng1_rad = math.radians(lng1)
+                    lat2_rad = math.radians(lat2)
+                    lng2_rad = math.radians(lng2)
+                    
+                    dlat = lat2_rad - lat1_rad
+                    dlng = lng2_rad - lng1_rad
+                    
+                    a = math.sin(dlat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlng/2)**2
+                    c = 2 * math.asin(math.sqrt(a))
+                    
+                    return R * c
+                
+                distance_km = haversine_distance(user_lat, user_lng, ride_lat, ride_lng)
+                print(f"Ride {ride.get('_id')} distance: {distance_km:.2f}km (pickup: {ride_lat}, {ride_lng})")
+                
+                # Include rides within the specified radius
+                if distance_km <= radius_km:
+                    ride["distance_km"] = round(distance_km, 2)  # Add distance for sorting
+                    nearby_rides.append(ride)
+                    print(f"✓ Included ride {ride.get('_id')} - {distance_km:.2f}km away")
+                else:
+                    print(f"✗ Excluded ride {ride.get('_id')} - {distance_km:.2f}km away (outside {radius_km}km radius)")
+                    
             except Exception as e:
-                print(f"Query {i+1} failed: {e}")
+                print(f"Error processing ride {ride.get('_id', 'unknown')}: {e}")
                 continue
         
-        # Remove duplicates based on _id
-        seen_ids = set()
-        unique_docs = []
-        for doc in all_docs:
-            doc_id = str(doc["_id"])
-            if doc_id not in seen_ids:
-                seen_ids.add(doc_id)
-                unique_docs.append(doc)
+        # Sort by distance (closest first)
+        nearby_rides.sort(key=lambda r: r.get("distance_km", 999))
         
-        docs = [serialize_with_renamed_id(d) for d in unique_docs]
-        print(f"Found {len(docs)} unique rides total")
-        
-        # If no rides found, try a simple fallback
-        if not docs:
-            print("No rides found, trying simple fallback")
+        # Convert to API format
+        docs = []
+        for ride in nearby_rides[:limit]:
             try:
-                docs = [
-                    serialize_with_renamed_id(d)
-                    for d in rides_collection.find({}).sort("created_at", -1).limit(10)
-                ]
-                print(f"Fallback found {len(docs)} rides")
+                doc = serialize_with_renamed_id(ride)
+                docs.append(doc)
             except Exception as e:
-                print(f"Fallback query failed: {e}")
-                docs = []
-
+                print(f"Error serializing ride: {e}")
+                continue
+        
+        print(f"Returning {len(docs)} nearby rides within {radius_km}km")
         return jsonify({"rides": docs})
         
     except Exception as e:
@@ -334,6 +370,34 @@ def test_db_status():
             "status": "error",
             "error": str(e),
             "database": "disconnected"
+        }), 500
+
+@bp.get("/test/list-rides")
+def test_list_rides():
+    """List all rides with their pickup locations for debugging"""
+    try:
+        rides = list(rides_collection.find({}).limit(10))
+        rides_info = []
+        
+        for ride in rides:
+            ride_info = {
+                "id": str(ride.get("_id")),
+                "status": ride.get("status"),
+                "pickup_location": ride.get("pickup_location"),
+                "pickup_address": ride.get("pickup_address"),
+                "created_at": ride.get("created_at")
+            }
+            rides_info.append(ride_info)
+        
+        return jsonify({
+            "status": "success",
+            "total_rides": len(rides_info),
+            "rides": rides_info
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e)
         }), 500
 
 @bp.post("/test/create-sample")
